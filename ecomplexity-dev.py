@@ -1,12 +1,14 @@
-#!/usr/bin/env python
+
 # coding: utf-8
 
-# In[352]:
+# In[2]:
 
 
 get_ipython().run_line_magic('reset', '')
 # Import libraries
 import os
+import sys
+sys.path.append('/Users/shg309/Dropbox/Education/hks_cid_growth_lab/misc/ecomplexity/')
 import numpy as np
 import pandas as pd
 import warnings
@@ -172,4 +174,18 @@ print(kc.shape)
 
 eci = normalize(sign(kc, diversity) * kc)
 pci = normalize(sign(kp, ubiquity) * kp)
+
+
+# In[5]:
+
+
+### Testing ###
+a = np.arange(24).reshape(2,3,4)
+a
+
+
+# In[7]:
+
+
+a.sum(axis=1)
 

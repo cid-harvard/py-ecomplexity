@@ -12,7 +12,8 @@ class ComplexityData(object):
     """Calculate complexity and other related results
 
     Args:
-        data: pandas dataframe containing production / trade data
+        data: pandas dataframe containing production / trade data, including variables
+            indicating time, location, product and value
         cols_input: dict indicating column names for cols indicating time, location,
             product and value. Example: {'time':'year', 'loc':'origin', 'prod':'hs92',
             'val':'export_val'}
@@ -30,20 +31,20 @@ class ComplexityData(object):
 
     def __init__(self, data, cols_input, val_errors_flag_input='coerce', rca_mcp_threshold_input=1):
         self.data = data
-        rename_cols(cols_input)
-        clean_data(data, val_errors_flag_input)
-        create_full_df(data)
-        self.rca, self.mcp = calculate_rca_and_mcp(data, rca_mcp_threshold_input)
+        self.rename_cols(cols_input)
+        self.clean_data(val_errors_flag_input)
+        self.create_full_df()
+        self.calculate_rca_and_mcp(rca_mcp_threshold_input)
+        self.diversity = self.mcp.sum(axis=2)
+        self.ubiquity = self.mcp.sum(axis=1)
 
-        self.diversity = mcp.sum(axis=2)
-        self.ubiquity = mcp.sum(axis=1)
-        Mcc, Mpp = calculate_Mcc_Mpp(mcp, diversity, ubiquity)
+        Mcc, Mpp = self.calculate_Mcc_Mpp()
 
-        kp = calculate_Kvec(Mpp)
-        kc = calculate_Kvec(Mcc)
+        kp = self.calculate_Kvec(Mpp)
+        kc = self.calculate_Kvec(Mcc)
 
-        self.eci = normalize(sign(kc, diversity) * kc)
-        self.pci = normalize(sign(kp, ubiquity) * kp)
+        self.eci = self.normalize(self.sign(kc, self.diversity) * kc)
+        self.pci = self.normalize(self.sign(kp, self.ubiquity) * kp)
 
     def rename_cols(self, cols_input):
         # Rename cols
@@ -73,7 +74,7 @@ class ComplexityData(object):
         data_index = pd.MultiIndex.from_product(self.data.index.levels,names=self.data.index.names)
         self.data = self.data.reindex(data_index, fill_value=0)
 
-    def calculate_rca_and_mcp(self);
+    def calculate_rca_and_mcp(self, rca_mcp_threshold_input):
         # Calculate RCA numpy array
         time_n_vals = len(self.data.index.levels[0])
         loc_n_vals = len(self.data.index.levels[1])
@@ -89,8 +90,36 @@ class ComplexityData(object):
         # Calculate MCP matrix
         self.mcp = self.rca
         self.mcp = np.nan_to_num(self.mcp)
-        self.mcp[self.rca>=rca_self.mcp_threshold_input] = 1
+        self.mcp[self.rca>=rca_mcp_threshold_input] = 1
         self.mcp[self.rca<rca_mcp_threshold_input] = 0
+
+    def calculate_rpop(self, pop):
+        """Find RPOP. WORK IN PROGRESS!
+
+        Args:
+            pop: A pandas df, with time, location and corresponding population,
+                in that order
+
+        Returns:
+            rpop: numpy array with rpop values
+        """
+        time_n_vals = len(self.data.index.levels[0])
+        loc_n_vals = len(self.data.index.levels[1])
+        prod_n_vals = len(self.data.index.levels[2])
+        data_np = self.data.values.reshape((time_n_vals,loc_n_vals,prod_n_vals))
+
+        pop.columns = ['time','loc','pop']
+        pop = pop.reset_index().set_index(['time','loc'])
+        time_n_vals = len(self.pop.index.levels[0])
+        loc_n_vals = len(self.pop.index.levels[1])
+        pop = pop.values.reshape((time_n_vals,loc_n_vals))
+
+        num = data_np / pop[:,:,np.newaxis]
+        time_total = data_np.sum(axis=1)[:,np.newaxis,:]
+        world_pop_total = pop.sum(axis=1)[:,np.newaxis,np.newaxis]
+        den = time_total/world_pop_total
+        rpop = num/den
+        return(rpop)
 
     def calculate_Mcc_Mpp(self):
         mcp1 = self.mcp/self.diversity[:,:,np.newaxis]
