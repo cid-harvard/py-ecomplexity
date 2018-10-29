@@ -6,8 +6,6 @@ STATA implementation of the economic complexity index available at: https://gith
 
 Explore complexity and associated data using Harvard CID's Atlas tool: http://atlas.cid.harvard.edu
 
-#### TODO:
-
 The aim is to replicate the STATA ecomplexity package's features:
 - Args:
     + dict: colnames for time,loc,prod,val
@@ -17,7 +15,7 @@ The aim is to replicate the STATA ecomplexity package's features:
     + cont
     + asym
     + knn
-    
+
 - Returns:
     + eci
     + pci
@@ -29,3 +27,14 @@ The aim is to replicate the STATA ecomplexity package's features:
     + rca
     + rpop
     + M
+
+
+#### Notes
+
+Currently, this handles NaN's by coercing them to zero. This is true for both NaN's in the trade / production values, and those in the population values (for rpop)
+
+For our test dataset containing world trade, the STATA ecomplexity package takes around 4.88 mins, and the py-ecomplexity package takes around 40 seconds. This will be even faster if parallelized.
+
+#### TODO:
+
+- Parallellize the numpy vectorization. Currently runs on a single thread on a single core.
