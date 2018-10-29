@@ -1,20 +1,20 @@
 
 # coding: utf-8
 
-# In[21]:
+# In[65]:
 
 
 get_ipython().run_line_magic('reset', '')
 
 
-# In[22]:
+# In[66]:
 
 
 get_ipython().run_line_magic('reload_ext', 'autoreload')
 get_ipython().run_line_magic('autoreload', '2')
 
 
-# In[23]:
+# In[67]:
 
 
 # Import libraries
@@ -27,30 +27,76 @@ import warnings
 from ecomplexity import ComplexityData
 
 
-# In[24]:
+# In[68]:
 
 
 # Read example dataset
-data = pd.read_csv('data/raw/year_origin_hs92_4.tsv',sep='\t')
+ROOT = '/Users/shreyasgm/Dropbox (Personal)/Education/hks_cid_growth_lab/misc/ecomplexity/'
+data = pd.read_csv(ROOT + 'data/raw/year_origin_hs92_4.tsv',sep='\t')
 data.drop(columns=['export_rca','import_rca','import_val'], inplace=True)
 data.head()
 
 
-# In[33]:
+# In[69]:
 
 
 check = ComplexityData(data,{'time':'year','loc':'origin','prod':'hs92','val':'export_val'})
 
 
-# In[44]:
+# In[71]:
 
 
-data.year.unique()
+# Create pop df to test rpop
+from itertools import product
+
+random_pop_df = pd.DataFrame(list(product(np.arange(2000,2010), ['aus','usa','jam'])))
+random_pop_df.columns = ['time','loc']
+random_pop_df['pop'] = np.random.randint(200000,2e6,len(random_pop_df))
+random_pop_df.head()
 
 
-# In[50]:
+# In[76]:
 
 
-random_pop_df = pd.DataFrame({'year':np.arange(1995,2015),'pop':np.random.randint(200000,2e6,len(data.year.unique()))})
-rpop = check.calculate_rpop()
+# Test rpop - wrong answer!
+np.nansum(check.calculate_rpop(random_pop_df))
+
+
+# In[ ]:
+
+
+### Temp
+a = pd.DataFrame(list(product(np.arange(2000,2010), ['aus','usa','jam'], ['prod1','prod2'])))
+a.columns = ['time','loc','prod']
+a['val'] = np.random.randint(200000,2e6,len(a))
+a = a[~((a.time==2002) & (a['loc']=='jam'))]
+a = a[~((a.time==2003) & (a['loc']=='aus'))]
+a = a.set_index(['time','loc','prod'])
+# a
+
+
+# In[ ]:
+
+
+## Temp
+index_df = data.head(n=100000).copy().reset_index(drop=True)     .rename(columns={'year':'time','origin':'loc'})     .set_index(['time','loc'])
+pop_index = pd.MultiIndex.from_product(
+            [index_df.index.levels[0], index_df.index.levels[1]],
+            names=['time', 'loc'])
+random_pop_df.reindex(index=pop_index)
+index_df
+
+
+# In[ ]:
+
+
+### Temp Testing ###
+a = np.arange(24).reshape(2,3,4)
+
+
+# In[ ]:
+
+
+a = data.head()
+a.head()
 
