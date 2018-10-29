@@ -1,20 +1,20 @@
 
 # coding: utf-8
 
-# In[65]:
+# In[55]:
 
 
 get_ipython().run_line_magic('reset', '')
 
 
-# In[66]:
+# In[56]:
 
 
 get_ipython().run_line_magic('reload_ext', 'autoreload')
 get_ipython().run_line_magic('autoreload', '2')
 
 
-# In[67]:
+# In[57]:
 
 
 # Import libraries
@@ -27,23 +27,23 @@ import warnings
 from ecomplexity import ComplexityData
 
 
-# In[68]:
+# In[59]:
 
 
 # Read example dataset
-ROOT = '/Users/shreyasgm/Dropbox (Personal)/Education/hks_cid_growth_lab/misc/ecomplexity/'
+ROOT = '/Users/shg309/Dropbox/Education/hks_cid_growth_lab/misc/ecomplexity/'
 data = pd.read_csv(ROOT + 'data/raw/year_origin_hs92_4.tsv',sep='\t')
 data.drop(columns=['export_rca','import_rca','import_val'], inplace=True)
 data.head()
 
 
-# In[69]:
+# In[60]:
 
 
 check = ComplexityData(data,{'time':'year','loc':'origin','prod':'hs92','val':'export_val'})
 
 
-# In[71]:
+# In[61]:
 
 
 # Create pop df to test rpop
@@ -55,11 +55,23 @@ random_pop_df['pop'] = np.random.randint(200000,2e6,len(random_pop_df))
 random_pop_df.head()
 
 
-# In[76]:
+# In[92]:
 
 
-# Test rpop - wrong answer!
+# Test rpop
 np.nansum(check.calculate_rpop(random_pop_df))
+
+
+# In[87]:
+
+
+np.where(~np.isnan(pop))
+
+
+# In[88]:
+
+
+np.nansum()
 
 
 # In[ ]:

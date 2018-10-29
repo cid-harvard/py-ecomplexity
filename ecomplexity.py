@@ -29,13 +29,13 @@ class ComplexityData(object):
     """Calculate complexity and other related results
 
     Args:
-        data: pandas dataframe containing production / trade data. 
+        data: pandas dataframe containing production / trade data.
             Including variables indicating time, location, product and value
         cols_input: dict of column names for time, location, product and value.
             Example: {'time':'year', 'loc':'origin', 'prod':'hs92', 'val':'export_val'}
         val_errors_flag_input: {'coerce','ignore','raise'}. Passed to pd.to_numeric
             *default* coerce.
-        rca_mcp_threshold_input: numeric indicating threshold beyond which mcp is 1. 
+        rca_mcp_threshold_input: numeric indicating threshold beyond which mcp is 1.
             *default* 1.
 
     Attributes:
@@ -52,8 +52,8 @@ class ComplexityData(object):
         self.clean_data(val_errors_flag_input)
         self.create_full_df()
         self.calculate_rca_and_mcp(rca_mcp_threshold_input)
-        self.diversity = self.mcp.sum(axis=2)
-        self.ubiquity = self.mcp.sum(axis=1)
+        self.diversity = np.nansum(self.mcp, axis=2)
+        self.ubiquity = np.nansum(self.mcp, axis=1)
 
         Mcc, Mpp = self.calculate_Mcc_Mpp()
 
@@ -107,9 +107,9 @@ class ComplexityData(object):
 
         # Calculate RCA, disable dividebyzero errors
         with np.errstate(divide='ignore', invalid='ignore'):
-            num = (data_np / data_np.sum(axis=2)[:, :, np.newaxis])
-            loc_total = data_np.sum(axis=1)[:, np.newaxis, :]
-            world_total = loc_total.sum(axis=2)[:, :, np.newaxis]
+            num = (data_np / np.nansum(data_np, axis=2)[:, :, np.newaxis])
+            loc_total = np.nansum(data_np, axis=1)[:, np.newaxis, :]
+            world_total = np.nansum(loc_total, axis=2)[:, :, np.newaxis]
             den = loc_total / world_total
             self.rca = num / den
 
@@ -147,8 +147,8 @@ class ComplexityData(object):
 
         with np.errstate(divide='ignore', invalid='ignore'):
             num = data_np / pop[:, :, np.newaxis]
-            loc_total = data_np.sum(axis=1)[:, np.newaxis, :]
-            world_pop_total = pop.sum(axis=1)[:, np.newaxis, np.newaxis]
+            loc_total = np.nansum(data_np, axis=1)[:, np.newaxis, :]
+            world_pop_total = np.nansum(pop, axis=1)[:, np.newaxis, np.newaxis]
             den = loc_total / world_pop_total
             rpop = num / den
         return(rpop)
