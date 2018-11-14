@@ -8,7 +8,7 @@ setup(name='py-ecomplexity',
       author_email='shreyas_gadgin_matha@hks.harvard.edu',
       license='MIT',
       packages=['ecomplexity'],
-      package_dir={'': 'ecomplexity'},
+      package_dir={'ecomplexity': 'ecomplexity'},
       keywords="pandas python networks economics complexity",
       install_requires=[
           'pandas >0.23.0',
