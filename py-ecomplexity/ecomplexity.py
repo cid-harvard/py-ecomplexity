@@ -25,7 +25,7 @@ def timethis(func):
     return wrapper
 
 
-class ComplexityData(object):
+class ecomplexity(object):
     """Calculate complexity and other related results
 
     Args:
