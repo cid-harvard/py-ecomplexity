@@ -12,5 +12,5 @@ setup(name='py-ecomplexity',
       install_requires=[
           'pandas',
           'numpy'
-      ]
+      ],
       zip_safe=False)
