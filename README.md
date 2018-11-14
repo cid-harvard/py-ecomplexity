@@ -10,7 +10,10 @@ Explore complexity and associated data using Harvard CID's Atlas tool: http://at
 
 #### Usage
 
-Installation: `pip install git+https://github.com/cid-harvard/py-ecomplexity@master`
+**Installation**: `pip install git+https://github.com/cid-harvard/py-ecomplexity@master`
+
+**Import**:
+`import ecomplexity`
 
 The aim is to replicate the STATA ecomplexity package's features:
 - Args:
