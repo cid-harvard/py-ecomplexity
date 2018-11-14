@@ -63,6 +63,8 @@ class ComplexityData(object):
         self.eci = self.normalize(self.sign(kc, self.diversity) * kc)
         self.pci = self.normalize(self.sign(kp, self.ubiquity) * kp)
 
+        self.reshape_output_to_data()
+
     @timethis
     def rename_cols(self, cols_input):
         # Rename cols
@@ -168,6 +170,19 @@ class ComplexityData(object):
         Mpp = mcp1.transpose(0, 2, 1) @ mcp2
         return(Mcc, Mpp)
 
+    @timethis
+    def reshape_output_to_data(self):
+        diversity = self.diversity[:,:,np.newaxis].repeat(self.rca.shape[2], axis=2).ravel()
+        ubiquity = self.ubiquity[:,np.newaxis,:].repeat(self.rca.shape[1], axis=1).ravel()
+        eci = self.eci[:, :, np.newaxis].repeat(self.rca.shape[2], axis=2).ravel()
+        pci = self.pci[:, np.newaxis, :].repeat(self.rca.shape[1], axis=1).ravel()
+        output = pd.DataFrame.from_dict({'diversity': diversity,
+                                         'ubiquity': ubiquity,
+                                         'rca': self.rca.ravel(),
+                                         'eci': eci,
+                                         'pci': pci}).reset_index(drop=True)
+        self.output = pd.concat([self.data.reset_index(), output], axis=1)
+
     @staticmethod
     @timethis
     def calculate_Kvec(m_tilde):
@@ -185,4 +200,4 @@ class ComplexityData(object):
 
     @staticmethod
     def normalize(v):
-        return (v - v.mean(axis=1)[:, np.newaxis]) / v.std(axis=1)[:, np.newaxis]
+        return(v - v.mean(axis=1)[:, np.newaxis]) / v.std(axis=1)[:, np.newaxis]
