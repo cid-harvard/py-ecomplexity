@@ -8,6 +8,10 @@ STATA implementation of the economic complexity index available at: https://gith
 
 Explore complexity and associated data using Harvard CID's Atlas tool: http://atlas.cid.harvard.edu
 
+#### Usage
+
+Installation: `pip install git+https://github.com/cid-harvard/py-ecomplexity@master`
+
 The aim is to replicate the STATA ecomplexity package's features:
 - Args:
     + dict: colnames for time,loc,prod,val

@@ -10,7 +10,7 @@ setup(name='py-ecomplexity',
       packages=find_packages(),
       keywords="pandas python networks economics complexity",
       install_requires=[
-          'pandas',
-          'numpy'
+          'pandas >0.23.0',
+          'numpy >1.15.0'
       ],
       zip_safe=False)
