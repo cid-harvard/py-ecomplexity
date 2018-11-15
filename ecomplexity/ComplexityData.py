@@ -46,7 +46,7 @@ class ComplexityData(object):
 
     def __init__(self, data, cols_input, presence_test="rca", val_errors_flag='coerce',
                  rca_mcp_threshold=1, rpop_mcp_threshold=1, pop=None):
-        self.data = data
+        self.data = data.copy()
         self.rename_cols(cols_input)
         self.clean_data(val_errors_flag)
         self.create_full_df()
@@ -68,14 +68,11 @@ class ComplexityData(object):
         self.pci = self.normalize(self.sign(kp, self.ubiquity) * kp)
 
         self.reshape_output_to_data()
+        self.conform_to_original_data(cols_input, data)
 
     def rename_cols(self, cols_input):
         # Rename cols
-        cols_default = {'time': 'time', 'loc': 'loc',
-                        'prod': 'prod', 'val': 'val'}
-        cols_map = {k: (cols_input[k] if k in cols_input else cols_default[
-                        k]) for k in cols_default}
-        cols_map_inv = {v: k for k, v in cols_map.items()}
+        cols_map_inv = {v: k for k, v in cols_input.items()}
         self.data = self.data.rename(columns=cols_map_inv)
         self.data = self.data[['time', 'loc', 'prod', 'val']]
 
@@ -226,6 +223,11 @@ class ComplexityData(object):
                                              'pci': pci}).reset_index(drop=True)
 
         self.output = pd.concat([self.data.reset_index(), output], axis=1)
+
+    def conform_to_original_data(self, cols_input, data):
+        # Reset column names and add dropped columns back
+        self.output = self.output.rename(columns=cols_input)
+        self.output = self.output.merge(data, how="outer", on=list(cols_input.values()))
 
     @staticmethod
     def calculate_Kvec(m_tilde):
