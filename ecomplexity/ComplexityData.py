@@ -21,10 +21,14 @@ class ComplexityData(object):
             Including variables indicating time, location, product and value
         cols_input: dict of column names for time, location, product and value.
             Example: {'time':'year', 'loc':'origin', 'prod':'hs92', 'val':'export_val'}
+        presence_test: str for test used for presence of industry in location.
+            One of "rca" (default), "rpop" or "both".
         val_errors_flag_input: {'coerce','ignore','raise'}. Passed to pd.to_numeric
             *default* coerce.
         rca_mcp_threshold_input: numeric indicating threshold beyond which mcp is 1.
             *default* 1.
+        pop: pandas df, with time, location and corresponding population, in that order.
+            Not required if presence_test is "rca" (default).
 
     Attributes:
         diversity: k_c,0
@@ -34,12 +38,13 @@ class ComplexityData(object):
         pci: Product complexity index
     """
 
-    def __init__(self, data, cols_input, val_errors_flag_input='coerce', rca_mcp_threshold_input=1):
+    def __init__(self, data, cols_input, presence_test="rca", val_errors_flag_input='coerce', rca_mcp_threshold_input=1, pop=None):
         self.data = data
         self.rename_cols(cols_input)
         self.clean_data(val_errors_flag_input)
         self.create_full_df()
-        self.calculate_rca_and_mcp(rca_mcp_threshold_input)
+        self.calculate_rca()
+        self.calculate_mcp(rca_mcp_threshold_input, presence_test, pop)
         self.diversity = np.nansum(self.mcp, axis=2)
         self.ubiquity = np.nansum(self.mcp, axis=1)
 
@@ -83,7 +88,7 @@ class ComplexityData(object):
             self.data.index.levels, names=self.data.index.names)
         self.data = self.data.reindex(data_index, fill_value=0)
 
-    def calculate_rca_and_mcp(self, rca_mcp_threshold_input):
+    def calculate_rca(self):
         # Convert data into numpy array
         time_n_vals = len(self.data.index.levels[0])
         loc_n_vals = len(self.data.index.levels[1])
@@ -99,21 +104,25 @@ class ComplexityData(object):
             den = loc_total / world_total
             self.rca = num / den
 
-        # Calculate MCP matrixs
-        self.mcp = self.rca
-        self.mcp = np.nan_to_num(self.mcp)
-        self.mcp = np.where(self.mcp >= rca_mcp_threshold_input, 1, 0)
+    def calculate_mcp(self, rca_mcp_threshold_input, presence_test, pop, mcp_input):
+        def id_binary(self):
+            self.mcp = np.nan_to_num(self.mcp)
+            self.mcp = np.where(self.mcp >= rca_mcp_threshold_input, 1, 0)
+
+        if presence_test=="rca":
+            self.mcp = self.rca
+            id_binary()
+
+        elif presence_test=="rpop":
+            self.calculate_rpop(pop)
+            self.mcp = self.rpop
+            id_binary()
+
+        elif presence_test=="both":
+            self.mcp = self.rca + self.rpop
+            id_binary()
 
     def calculate_rpop(self, pop):
-        """Find RPOP. WORK IN PROGRESS!
-
-        Args:
-            pop: A pandas df, with time, location and corresponding population,
-                in that order
-
-        Returns:
-            rpop: numpy array with rpop values
-        """
         # After constructing df with all combinations, convert data into ndarray
         time_n_vals = len(self.data.index.levels[0])
         loc_n_vals = len(self.data.index.levels[1])
@@ -137,7 +146,7 @@ class ComplexityData(object):
             world_pop_total = np.nansum(pop, axis=1)[:, np.newaxis, np.newaxis]
             den = loc_total / world_pop_total
             rpop = num / den
-        return(rpop)
+        self.rpop = rpop
 
     def calculate_Mcc_Mpp(self):
 
@@ -158,11 +167,22 @@ class ComplexityData(object):
         ubiquity = self.ubiquity[:,np.newaxis,:].repeat(self.rca.shape[1], axis=1).ravel()
         eci = self.eci[:, :, np.newaxis].repeat(self.rca.shape[2], axis=2).ravel()
         pci = self.pci[:, np.newaxis, :].repeat(self.rca.shape[1], axis=1).ravel()
-        output = pd.DataFrame.from_dict({'diversity': diversity,
-                                         'ubiquity': ubiquity,
-                                         'rca': self.rca.ravel(),
-                                         'eci': eci,
-                                         'pci': pci}).reset_index(drop=True)
+
+        if hasattr(self, 'rpop'):
+            output = pd.DataFrame.from_dict({'diversity': diversity,
+                                             'ubiquity': ubiquity,
+                                             'rca': self.rca.ravel(),
+                                             'rpop': self.rpop.ravel(),
+                                             'eci': eci,
+                                             'pci': pci}).reset_index(drop=True)
+
+        else:
+            output = pd.DataFrame.from_dict({'diversity': diversity,
+                                             'ubiquity': ubiquity,
+                                             'rca': self.rca.ravel(),
+                                             'eci': eci,
+                                             'pci': pci}).reset_index(drop=True)
+
         self.output = pd.concat([self.data.reset_index(), output], axis=1)
 
     @staticmethod
