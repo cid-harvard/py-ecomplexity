@@ -25,7 +25,7 @@ def timethis(func):
     return wrapper
 
 
-class ecomplexity(object):
+class ComplexityData(object):
     """Calculate complexity and other related results
 
     Args:
@@ -201,3 +201,8 @@ class ecomplexity(object):
     @staticmethod
     def normalize(v):
         return(v - v.mean(axis=1)[:, np.newaxis]) / v.std(axis=1)[:, np.newaxis]
+
+
+def ecomplexity(data, cols_input, val_errors_flag_input='coerce', rca_mcp_threshold_input=1):
+    cdata = ComplexityData(data, cols_input, val_errors_flag_input, rca_mcp_threshold_input)
+    return(cdata.output)
