@@ -1,5 +1,6 @@
 Data/
 archive/
+.DS_Store
 
 # Following lines created by https://www.gitignore.io/api/python
 

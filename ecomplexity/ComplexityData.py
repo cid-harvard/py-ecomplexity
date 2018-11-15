@@ -13,18 +13,6 @@ import datetime
 # rca_mcp_threshold_input = 1
 
 
-def timethis(func):
-    """Time a function of your choice"""
-    @wraps(func)
-    def wrapper(*arg, **kw):
-        t = time.time()
-        res = func(*arg, **kw)
-        runtime = str(datetime.timedelta(seconds=(time.time() - t)))
-        print("TIMING: function {} took {}.".format(func.__name__, runtime))
-        return res
-    return wrapper
-
-
 class ComplexityData(object):
     """Calculate complexity and other related results
 
@@ -65,7 +53,6 @@ class ComplexityData(object):
 
         self.reshape_output_to_data()
 
-    @timethis
     def rename_cols(self, cols_input):
         # Rename cols
         cols_default = {'time': 'time', 'loc': 'loc',
@@ -76,7 +63,6 @@ class ComplexityData(object):
         self.data = self.data.rename(columns=cols_map_inv)
         self.data = self.data[['time', 'loc', 'prod', 'val']]
 
-    @timethis
     def clean_data(self, val_errors_flag_input):
         # Make sure values are numeric
         self.data.val = pd.to_numeric(
@@ -91,14 +77,12 @@ class ComplexityData(object):
                 'Duplicate values exist, keeping the first occurrence')
             self.data = self.data[~self.data.index.duplicated()]
 
-    @timethis
     def create_full_df(self):
         # Create pandas dataframe with all possible combinations of values
         data_index = pd.MultiIndex.from_product(
             self.data.index.levels, names=self.data.index.names)
         self.data = self.data.reindex(data_index, fill_value=0)
 
-    @timethis
     def calculate_rca_and_mcp(self, rca_mcp_threshold_input):
         # Convert data into numpy array
         time_n_vals = len(self.data.index.levels[0])
@@ -155,7 +139,6 @@ class ComplexityData(object):
             rpop = num / den
         return(rpop)
 
-    @timethis
     def calculate_Mcc_Mpp(self):
 
         with np.errstate(divide='ignore', invalid='ignore'):
@@ -170,7 +153,6 @@ class ComplexityData(object):
         Mpp = mcp1.transpose(0, 2, 1) @ mcp2
         return(Mcc, Mpp)
 
-    @timethis
     def reshape_output_to_data(self):
         diversity = self.diversity[:,:,np.newaxis].repeat(self.rca.shape[2], axis=2).ravel()
         ubiquity = self.ubiquity[:,np.newaxis,:].repeat(self.rca.shape[1], axis=1).ravel()
@@ -184,7 +166,6 @@ class ComplexityData(object):
         self.output = pd.concat([self.data.reset_index(), output], axis=1)
 
     @staticmethod
-    @timethis
     def calculate_Kvec(m_tilde):
         eigvals, eigvecs = np.linalg.eig(m_tilde)
         eigvecs = np.real(eigvecs)
@@ -204,5 +185,6 @@ class ComplexityData(object):
 
 
 def ecomplexity(data, cols_input, val_errors_flag_input='coerce', rca_mcp_threshold_input=1):
+    """Simple wrapper for complexity calculations through the ComplexityData class"""
     cdata = ComplexityData(data, cols_input, val_errors_flag_input, rca_mcp_threshold_input)
     return(cdata.output)
