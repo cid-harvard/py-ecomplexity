@@ -22,7 +22,9 @@ class ComplexityData(object):
         cols_input: dict of column names for time, location, product and value.
             Example: {'time':'year', 'loc':'origin', 'prod':'hs92', 'val':'export_val'}
         presence_test: str for test used for presence of industry in location.
-            One of "rca" (default), "rpop" or "both".
+            One of "rca" (default), "rpop", "both", or "manual".
+            Determines which values are used for M_cp calculations.
+            If "manual", M_cp is taken as given from the "value" column in data
         val_errors_flag: {'coerce','ignore','raise'}. Passed to pd.to_numeric
             *default* coerce.
         rca_mcp_threshold: numeric indicating RCA threshold beyond which mcp is 1.
@@ -35,19 +37,25 @@ class ComplexityData(object):
     Attributes:
         diversity: k_c,0
         ubiquity: k_p,0
-        rca: RCA matrix
-        rpop: (available if presence_test!="rca") RPOP matrix
+        rca: Balassa's RCA
+        rpop: (available if presence_test!="rca") RPOP
+        mcp: MCP used for complexity calculations
         eci: Economic complexity index
         pci: Product complexity index
     """
 
-    def __init__(self, data, cols_input, presence_test="rca", val_errors_flag='coerce', rca_mcp_threshold=1, rpop_mcp_threshold=1, pop=None):
+    def __init__(self, data, cols_input, presence_test="rca", val_errors_flag='coerce',
+                 rca_mcp_threshold=1, rpop_mcp_threshold=1, pop=None):
         self.data = data
         self.rename_cols(cols_input)
         self.clean_data(val_errors_flag)
         self.create_full_df()
-        self.calculate_rca()
-        self.calculate_mcp(rca_mcp_threshold, rpop_mcp_threshold, presence_test, pop)
+        if presence_test != "manual":
+            self.calculate_rca()
+            self.calculate_mcp(rca_mcp_threshold, rpop_mcp_threshold,
+                               presence_test, pop)
+        else:
+            self.calculate_manual_mcp()
         self.diversity = np.nansum(self.mcp, axis=2)
         self.ubiquity = np.nansum(self.mcp, axis=1)
 
@@ -107,21 +115,40 @@ class ComplexityData(object):
             den = loc_total / world_total
             self.rca = num / den
 
-    def calculate_mcp(self, rca_mcp_threshold_input, rpop_mcp_threshold_input, presence_test, pop):
+    def calculate_mcp(self, rca_mcp_threshold_input, rpop_mcp_threshold_input,
+                      presence_test, pop):
         def convert_to_binary(x, threshold):
             x = np.nan_to_num(x)
             x = np.where(x >= threshold, 1, 0)
             return(x)
 
-        if presence_test=="rca":
+        if presence_test == "rca":
             self.mcp = convert_to_binary(self.rca, rca_mcp_threshold_input)
 
-        elif presence_test=="rpop":
+        elif presence_test == "rpop":
             self.calculate_rpop(pop)
             self.mcp = convert_to_binary(self.rca, rpop_mcp_threshold_input)
 
-        elif presence_test=="both":
-            self.mcp = convert_to_binary(self.rca, rca_mcp_threshold_input) + convert_to_binary(self.rca, rpop_mcp_threshold_input)
+        elif presence_test == "both":
+            self.mcp = convert_to_binary(
+                self.rca, rca_mcp_threshold_input) + convert_to_binary(self.rca, rpop_mcp_threshold_input)
+
+    def calculate_manual_mcp(self):
+        # Test to see if indeed MCP
+        if np.any(~np.isin(self.data.values, [0, 1])):
+            error_val = self.data.values[~np.isin(
+                self.data.values, [0, 1])].flat[0]
+            raise ValueError(
+                "Manually supplied MCP column contains values other than 0 or 1 - Val: {}".format(error_val))
+
+        # Convert data into numpy array
+        time_n_vals = len(self.data.index.levels[0])
+        loc_n_vals = len(self.data.index.levels[1])
+        prod_n_vals = len(self.data.index.levels[2])
+        data_np = self.data.values.reshape(
+            (time_n_vals, loc_n_vals, prod_n_vals))
+
+        self.mcp = data_np
 
     def calculate_rpop(self, pop):
         # After constructing df with all combinations, convert data into ndarray
@@ -145,7 +172,8 @@ class ComplexityData(object):
             num = data_np / pop[:, :, np.newaxis]
             loc_total = np.nansum(data_np, axis=1)[:, np.newaxis, :]
             world_pop_total = np.nansum(pop, axis=1)[:, np.newaxis, np.newaxis]
-            den = loc_total.astype(np.float64) / world_pop_total.astype(np.float64)
+            den = loc_total.astype(np.float64) / \
+                world_pop_total.astype(np.float64)
             rpop = num / den
         self.rpop = rpop
 
@@ -164,23 +192,36 @@ class ComplexityData(object):
         return(Mcc, Mpp)
 
     def reshape_output_to_data(self):
-        diversity = self.diversity[:,:,np.newaxis].repeat(self.rca.shape[2], axis=2).ravel()
-        ubiquity = self.ubiquity[:,np.newaxis,:].repeat(self.rca.shape[1], axis=1).ravel()
-        eci = self.eci[:, :, np.newaxis].repeat(self.rca.shape[2], axis=2).ravel()
-        pci = self.pci[:, np.newaxis, :].repeat(self.rca.shape[1], axis=1).ravel()
+        diversity = self.diversity[:, :, np.newaxis].repeat(
+            self.mcp.shape[2], axis=2).ravel()
+        ubiquity = self.ubiquity[:, np.newaxis, :].repeat(
+            self.mcp.shape[1], axis=1).ravel()
+        eci = self.eci[:, :, np.newaxis].repeat(
+            self.mcp.shape[2], axis=2).ravel()
+        pci = self.pci[:, np.newaxis, :].repeat(
+            self.mcp.shape[1], axis=1).ravel()
 
         if hasattr(self, 'rpop'):
             output = pd.DataFrame.from_dict({'diversity': diversity,
                                              'ubiquity': ubiquity,
                                              'rca': self.rca.ravel(),
                                              'rpop': self.rpop.ravel(),
+                                             'mcp': self.mcp.ravel(),
+                                             'eci': eci,
+                                             'pci': pci}).reset_index(drop=True)
+
+        elif hasattr(self, 'rca'):
+            output = pd.DataFrame.from_dict({'diversity': diversity,
+                                             'ubiquity': ubiquity,
+                                             'rca': self.rca.ravel(),
+                                             'mcp': self.mcp.ravel(),
                                              'eci': eci,
                                              'pci': pci}).reset_index(drop=True)
 
         else:
             output = pd.DataFrame.from_dict({'diversity': diversity,
                                              'ubiquity': ubiquity,
-                                             'rca': self.rca.ravel(),
+                                             'mcp': self.mcp.ravel(),
                                              'eci': eci,
                                              'pci': pci}).reset_index(drop=True)
 
@@ -205,7 +246,8 @@ class ComplexityData(object):
         return(v - v.mean(axis=1)[:, np.newaxis]) / v.std(axis=1)[:, np.newaxis]
 
 
-def ecomplexity(data, cols_input, presence_test="rca", val_errors_flag='coerce', rca_mcp_threshold=1, rpop_mcp_threshold=1, pop=None):
+def ecomplexity(data, cols_input, presence_test="rca", val_errors_flag='coerce',
+                rca_mcp_threshold=1, rpop_mcp_threshold=1, pop=None):
     """Wrapper for complexity calculations through the ComplexityData class
 
     Args:
@@ -214,7 +256,9 @@ def ecomplexity(data, cols_input, presence_test="rca", val_errors_flag='coerce',
         cols_input: dict of column names for time, location, product and value.
             Example: {'time':'year', 'loc':'origin', 'prod':'hs92', 'val':'export_val'}
         presence_test: str for test used for presence of industry in location.
-            One of "rca" (default), "rpop" or "both".
+            One of "rca" (default), "rpop", "both", or "manual".
+            Determines which values are used for M_cp calculations.
+            If "manual", M_cp is taken as given from the "value" column in data
         val_errors_flag: {'coerce','ignore','raise'}. Passed to pd.to_numeric
             *default* coerce.
         rca_mcp_threshold: numeric indicating RCA threshold beyond which mcp is 1.
@@ -228,11 +272,13 @@ def ecomplexity(data, cols_input, presence_test="rca", val_errors_flag='coerce',
         Pandas dataframe containing the data with the following additional columns:
             - diversity: k_c,0
             - ubiquity: k_p,0
-            - rca: RCA matrix
-            - rpop: (available if presence_test!="rca") RPOP matrix
+            - rca: Balassa's RCA
+            - rpop: (available if presence_test!="rca") RPOP
+            - mcp: MCP used for complexity calculations
             - eci: Economic complexity index
             - pci: Product complexity index
 
     """
-    cdata = ComplexityData(data, cols_input, presence_test, val_errors_flag, rca_mcp_threshold, rpop_mcp_threshold, pop)
+    cdata = ComplexityData(data, cols_input, presence_test,
+                           val_errors_flag, rca_mcp_threshold, rpop_mcp_threshold, pop)
     return(cdata.output)
