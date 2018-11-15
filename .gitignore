@@ -1,7 +1,7 @@
 Data/
 archive/
 .DS_Store
-ecomplexity/tests
+ecomplexity/tests/
 
 # Following lines created by https://www.gitignore.io/api/python
 
