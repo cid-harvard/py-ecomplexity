@@ -49,6 +49,7 @@ class ComplexityData(object):
         self.data = data.copy()
         self.rename_cols(cols_input)
         self.clean_data(val_errors_flag)
+
         self.create_full_df()
         if presence_test != "manual":
             self.calculate_rca()
@@ -59,15 +60,29 @@ class ComplexityData(object):
         self.diversity = np.nansum(self.mcp, axis=2)
         self.ubiquity = np.nansum(self.mcp, axis=1)
 
-        Mcc, Mpp = self.calculate_Mcc_Mpp()
+        # Mcc, Mpp = self.calculate_Mcc_Mpp()
+        #
+        # kp = self.calculate_Kvec(Mpp)
+        # kc = self.calculate_Kvec(Mcc)
+        #
+        # self.eci = self.normalize(self.sign(kc, self.diversity) * kc)
+        # self.pci = self.normalize(self.sign(kp, self.ubiquity) * kp)
+        #
+        # self.reshape_output_to_data()
 
-        kp = self.calculate_Kvec(Mpp)
-        kc = self.calculate_Kvec(Mcc)
+        for time_slice in range(0,self.mcp.shape[0]):
+            self.calculate_full_df_time(time_slice)
+            self.mcp_t = self.mcp[time_slice, : , :]
+            self.ubiquity_t = self.ubiquity[time_slice, :]
+            self.diversity_t = self.diversity[time_slice, :]
+            self.mcp_t = self.mcp_t[:, ubiquity_t>0]
+            self.mcp_t = self.mcp_t[diversity_t>0, :]
+            Mcc, Mpp = self.calculate_Mcc_Mpp_time()
+            kp = self.calculate_Kvec_time(Mpp)
+            kc = self.calculate_Kvec_time(Mcc)
+            self.eci_time = self.normalize_time(self.sign_time(kc, self.diversity) * kc)
+            self.pci_time = self.normalize_time(self.sign_time(kp, self.ubiquity) * kp)
 
-        self.eci = self.normalize(self.sign(kc, self.diversity) * kc)
-        self.pci = self.normalize(self.sign(kp, self.ubiquity) * kp)
-
-        self.reshape_output_to_data()
         self.conform_to_original_data(cols_input, data)
 
     def rename_cols(self, cols_input):
@@ -95,6 +110,7 @@ class ComplexityData(object):
         data_index = pd.MultiIndex.from_product(
             self.data.index.levels, names=self.data.index.names)
         self.data = self.data.reindex(data_index, fill_value=0)
+
 
     def calculate_rca(self):
         # Convert data into numpy array
@@ -188,6 +204,17 @@ class ComplexityData(object):
         Mpp = mcp1.transpose(0, 2, 1) @ mcp2
         return(Mcc, Mpp)
 
+    def calculate_Mcc_Mpp_time(self):
+
+        # self._mcp_slice = self.mcp[]
+        mcp1 = self.mcp_t / self.diversity_t[:, np.newaxis]
+        mcp2 = self.mcp_t / self.ubiquity_t[np.newaxis, :]
+
+        # These matrix multiplication lines are *very* slow
+        Mcc = mcp1 @ mcp2.T
+        Mpp = mcp1.T @ mcp2
+        return(Mcc, Mpp)
+
     def reshape_output_to_data(self):
         diversity = self.diversity[:, :, np.newaxis].repeat(
             self.mcp.shape[2], axis=2).ravel()
@@ -240,12 +267,29 @@ class ComplexityData(object):
         return(Kvec)
 
     @staticmethod
+    def calculate_Kvec_time(m_tilde):
+        eigvals, eigvecs = np.linalg.eig(m_tilde)
+        eigvecs = np.real(eigvecs)
+        # Get eigenvector corresponding to second largest eigenvalue
+        eig_index = eigvals.argsort()[-2]
+        Kvec_time = eigvecs[:, eig_index]
+        return(Kvec_time)
+
+    @staticmethod
     def sign(k, kx_0):
         return(2 * int(np.corrcoef(k, kx_0)[0, 1] > 0) - 1)
 
     @staticmethod
+    def sign_time(k, kx_0):
+        return(2 * int(np.corrcoef(k, kx_0)[0,1] > 0) - 1)
+
+    @staticmethod
     def normalize(v):
         return(v - v.mean(axis=1)[:, np.newaxis]) / v.std(axis=1)[:, np.newaxis]
+
+    @staticmethod
+    def normalize_time(v):
+        return((v - v.mean())/v.std())
 
 
 def ecomplexity(data, cols_input, presence_test="rca", val_errors_flag='coerce',
