@@ -66,15 +66,13 @@ class ComplexityData(object):
             self.ubiquity_t = np.nansum(self.mcp_t, axis=0)
 
             Mcc, Mpp = self.calculate_Mcc_Mpp_time()
-            # print(Mcc.shape, Mpp.shape)
             kp = self.calculate_Kvec_time(Mpp)
             kc = self.calculate_Kvec_time(Mcc)
-            # self.calculate_kp_kc()
-            # print(kc.shape, self.diversity_t.shape)
             s1 = self.sign_time(self.diversity_t, kc)
-            s2 = self.sign_time(kp, self.ubiquity_t)
-            self.eci_t = self.normalize_time(s1 * kc)
-            self.pci_t = self.normalize_time(s1 * kp)
+            self.eci_t = s1 * kc
+            self.pci_t = s1 * kp
+            self.eci_t = (self.eci_t - self.eci_t.mean()) / self.eci_t.std()
+            self.pci_t = (self.pci_t - self.eci_t.mean()) / self.eci_t.std()
             self.reshape_output_to_data_time(t)
 
         self.output = pd.concat(self.output_list)
@@ -206,42 +204,6 @@ class ComplexityData(object):
         Mpp = mcp2.T @ mcp1
         return(Mcc, Mpp)
 
-    def calculate_Mcc_Mpp_time_2(self):
-        # Get number of countries and products
-        ncx, npx = self.mcp_t.shape
-
-        # Calculate diversity and ubiquity matrices
-        kc0 = self.mcp_t @ np.full((npx, npx), 1)
-        kp0 = np.full((ncx, ncx), 1) @ self.mcp_t
-
-        # Calculate the tilde Ms
-        mpp = ((self.mcp_t / kc0) / kp0).T @ self.mcp_t
-        mcc = self.mcp_t.T @ ((self.mcp_t / kp0) / kc0)
-
-        return(mcc, mpp)
-
-    def calculate_kp_kc(self):
-        # Get number of countries and products
-        ncx, npx = self.mcp_t.shape
-
-        # Calculate diversity and ubiquity matrices
-        kc0 = self.mcp_t @ np.full((npx, npx), 1)
-        kp0 = np.full((ncx, ncx), 1) @ self.mcp_t
-
-        # Calculate the tilde Ms
-        mpp = ((self.mcp_t / kc0) / kp0).T @ self.mcp_t
-        kp = self.calculate_Kvec_time(mpp)
-        kc = (self.mcp_t/kc0) @ kp
-        kc = kc[:,np.newaxis]
-
-        kc01d = self.mcp_t @ np.full((npx,1),1)
-        s = self.sign_time(kc01d, kc)
-        kc = s * kc
-        kp = s * kp
-        self.eci_t = kc @ np.full((1,npx), 1)
-        print(self.eci_t.shape)
-        self.pci_t = np.full((ncx, 1), 1) @ kp.T
-
     def reshape_output_to_data_time(self, t):
 
         diversity = self.diversity_t[:, np.newaxis].repeat(
@@ -252,15 +214,6 @@ class ComplexityData(object):
             self.mcp_t.shape[1], axis=1).ravel()
         pci = self.pci_t[np.newaxis, :].repeat(
             self.mcp_t.shape[0], axis=0).ravel()
-
-        # dict_op = {'diversity': diversity,
-        #                                  'ubiquity': ubiquity,
-        #                                  'rca': self.rca_t.ravel(),
-        #                                  'rpop': self.rpop_t.ravel(),
-        #                                  'mcp': self.mcp_t.ravel(),
-        #                                  'eci': eci,
-        #                                  'pci': pci}
-        # print({k:len(v) for k,v in dict_op.items()})
 
         if hasattr(self, 'rpop_t'):
             output = pd.DataFrame.from_dict({'diversity': diversity,
@@ -306,9 +259,9 @@ class ComplexityData(object):
         return(Kvec_time)
 
     @staticmethod
-    def sign_time(k, kx_0):
-        # return(np.sign(np.corrcoef(kc0, eci_vec)[0][1]))
-        return(2 * int(np.corrcoef(k, kx_0)[0, 1] > 0) - 1)
+    def sign_time(diversity, eci):
+        return(2*np.sign(np.corrcoef(diversity, eci)[0, 1])-1)
+        # return(2 * int(np.corrcoef(k, kx_0)[0, 1] > 0) - 1)
 
     @staticmethod
     def normalize_time(v):
