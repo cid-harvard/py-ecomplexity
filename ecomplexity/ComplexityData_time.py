@@ -150,9 +150,8 @@ class ComplexityData(object):
         data_np = self.data_t.values.reshape(
             (loc_n_vals, prod_n_vals))
 
-        pop_t = pop.copy()
-        pop_t.columns = ['time', 'loc', 'pop']
-        pop_t = pop_t[pop_t.time == t]
+        pop.columns = ['time', 'loc', 'pop']
+        pop_t = pop[pop.time == t].copy()
         pop_t = pop_t.drop(columns="time")
         pop_t = pop_t.reset_index(drop=True).set_index('loc')
         pop_index = self.data_t.index.unique('loc')
