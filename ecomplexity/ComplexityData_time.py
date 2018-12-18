@@ -65,9 +65,7 @@ class ComplexityData(object):
             self.diversity_t = np.nansum(self.mcp_t, axis=1)
             self.ubiquity_t = np.nansum(self.mcp_t, axis=0)
 
-            Mcc, Mpp = self.calculate_Mcc_Mpp_time()
-            kp = self.calculate_Kvec_time(Mpp)
-            kc = self.calculate_Kvec_time(Mcc)
+            kp, kc = self.calculate_Kvec_time()
             s1 = self.sign_time(self.diversity_t, kc)
             self.eci_t = s1 * kc
             self.pci_t = s1 * kp
@@ -195,15 +193,6 @@ class ComplexityData(object):
 
         self.mcp_t = data_np
 
-    def calculate_Mcc_Mpp_time(self):
-
-        mcp1 = (self.mcp_t / self.diversity_t[:, np.newaxis])
-        mcp2 = (self.mcp_t / self.ubiquity_t[np.newaxis, :])
-        # These matrix multiplication lines are very slow
-        Mcc = mcp1 @ mcp2.T
-        Mpp = mcp2.T @ mcp1
-        return(Mcc, Mpp)
-
     def reshape_output_to_data_time(self, t):
 
         diversity = self.diversity_t[:, np.newaxis].repeat(
@@ -249,23 +238,25 @@ class ComplexityData(object):
         self.output = self.output.merge(
             data, how="outer", on=list(cols_input.values()))
 
-    @staticmethod
-    def calculate_Kvec_time(m_tilde):
-        eigvals, eigvecs = np.linalg.eig(m_tilde)
+    def calculate_Kvec_time(self):
+        mcp1 = (self.mcp_t / self.diversity_t[:, np.newaxis])
+        mcp2 = (self.mcp_t / self.ubiquity_t[np.newaxis, :])
+        # These matrix multiplication lines are very slow
+        Mcc = mcp1 @ mcp2.T
+        Mpp = mcp2.T @ mcp1
+
+        # Calculate eigenvectors
+        eigvals, eigvecs = np.linalg.eig(Mpp)
         eigvecs = np.real(eigvecs)
         # Get eigenvector corresponding to second largest eigenvalue
         eig_index = eigvals.argsort()[-2]
-        Kvec_time = eigvecs[:, eig_index]
-        return(Kvec_time)
+        kp = eigvecs[:, eig_index]
+        kc = mcp1 @ kp
+        return(kp, kc)
 
     @staticmethod
     def sign_time(diversity, eci):
         return(2*np.sign(np.corrcoef(diversity, eci)[0, 1])-1)
-        # return(2 * int(np.corrcoef(k, kx_0)[0, 1] > 0) - 1)
-
-    @staticmethod
-    def normalize_time(v):
-        return((v - v.mean()) / v.std())
 
 
 def ecomplexity(data, cols_input, presence_test="rca", val_errors_flag='coerce',
