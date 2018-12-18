@@ -46,15 +46,22 @@ class ComplexityData(object):
     def __init__(self, data, cols_input, presence_test="rca", val_errors_flag='coerce',
                  rca_mcp_threshold=1, rpop_mcp_threshold=1, pop=None):
         self.data = data.copy()
+
+        # Standardize column names based on input
         self.rename_cols(cols_input)
+
+        # Clean data to handle NA's and such
         self.clean_data(val_errors_flag)
 
         self.output_list = []
 
+        # Iterate over time stamps
         for t in self.data.index.unique("time"):
             print(t)
+            # Rectangularize df
             self.create_full_df_time(t)
 
+            # Check if Mcp is pre-computed
             if presence_test != "manual":
                 self.calculate_rca_time()
                 self.calculate_mcp_time(rca_mcp_threshold, rpop_mcp_threshold,
@@ -62,13 +69,19 @@ class ComplexityData(object):
             else:
                 self.calculate_manual_mcp_time()
 
+            # Calculate diversity and ubiquity
             self.diversity_t = np.nansum(self.mcp_t, axis=1)
             self.ubiquity_t = np.nansum(self.mcp_t, axis=0)
 
+            # Calculate ECI and PCI eigenvectors
             kp, kc = self.calculate_Kvec_time()
+
+            # Adjust sign of ECI and PCI so it makes sense, as per book
             s1 = self.sign_time(self.diversity_t, kc)
             self.eci_t = s1 * kc
             self.pci_t = s1 * kp
+
+            # Normalize ECI and PCI (based on ECI values)
             self.eci_t = (self.eci_t - self.eci_t.mean()) / self.eci_t.std()
             self.pci_t = (self.pci_t - self.eci_t.mean()) / self.eci_t.std()
             self.reshape_output_to_data_time(t)
