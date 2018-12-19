@@ -82,8 +82,9 @@ class ComplexityData(object):
             self.pci_t = s1 * kp
 
             # Normalize ECI and PCI (based on ECI values)
-            self.eci_t = (self.eci_t - self.eci_t.mean()) / self.eci_t.std()
             self.pci_t = (self.pci_t - self.eci_t.mean()) / self.eci_t.std()
+            self.eci_t = (self.eci_t - self.eci_t.mean()) / self.eci_t.std()
+            
             self.reshape_output_to_data_time(t)
 
         self.output = pd.concat(self.output_list)
