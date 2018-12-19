@@ -1,7 +1,5 @@
 # Economic Complexity and Product Complexity
 
-THIS PACKAGE IS A WORK IN PROGRESS, DO NOT USE FOR PRODUCTION
-
 Python package to calculate economic complexity indices.
 
 STATA implementation of the economic complexity index available at: https://github.com/cid-harvard/ecomplexity

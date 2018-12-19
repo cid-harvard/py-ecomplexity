@@ -191,13 +191,12 @@ class ComplexityData(object):
 
         elif presence_test == "rpop":
             self.calculate_rpop(pop, t)
-            self.mcp_t = convert_to_binary(
-                self.rca_t, rpop_mcp_threshold_input)
+            self.mcp_t = convert_to_binary(self.rpop_t, rpop_mcp_threshold_input)
 
         elif presence_test == "both":
             self.calculate_rpop(pop, t)
-            self.mcp_t = convert_to_binary(
-                self.rca_t, rca_mcp_threshold_input) + convert_to_binary(self.rca_t, rpop_mcp_threshold_input)
+            self.mcp_t = convert_to_binary(self.rca_t, rca_mcp_threshold_input) + \
+                         convert_to_binary(self.rpop_t, rpop_mcp_threshold_input)
 
     def calculate_manual_mcp(self):
         """If pre-computed MCP supplied, check validity and reshape"""
