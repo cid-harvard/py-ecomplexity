@@ -59,44 +59,45 @@ class ComplexityData(object):
         for t in self.data.index.unique("time"):
             print(t)
             # Rectangularize df
-            self.create_full_df_time(t)
+            self.create_full_df(t)
 
             # Check if Mcp is pre-computed
             if presence_test != "manual":
-                self.calculate_rca_time()
-                self.calculate_mcp_time(rca_mcp_threshold, rpop_mcp_threshold,
+                self.calculate_rca()
+                self.calculate_mcp(rca_mcp_threshold, rpop_mcp_threshold,
                                         presence_test, pop, t)
             else:
-                self.calculate_manual_mcp_time()
+                self.calculate_manual_mcp()
 
             # Calculate diversity and ubiquity
             self.diversity_t = np.nansum(self.mcp_t, axis=1)
             self.ubiquity_t = np.nansum(self.mcp_t, axis=0)
 
             # Calculate ECI and PCI eigenvectors
-            kp, kc = self.calculate_Kvec_time()
+            kp, kc = self.calculate_Kvec()
 
             # Adjust sign of ECI and PCI so it makes sense, as per book
-            s1 = self.sign_time(self.diversity_t, kc)
+            s1 = self.sign(self.diversity_t, kc)
             self.eci_t = s1 * kc
             self.pci_t = s1 * kp
 
             # Normalize ECI and PCI (based on ECI values)
             self.pci_t = (self.pci_t - self.eci_t.mean()) / self.eci_t.std()
             self.eci_t = (self.eci_t - self.eci_t.mean()) / self.eci_t.std()
-            
-            self.reshape_output_to_data_time(t)
+
+            self.reshape_output_to_data(t)
 
         self.output = pd.concat(self.output_list)
         self.conform_to_original_data(cols_input, data)
 
     def rename_cols(self, cols_input):
-        # Rename cols
+        """Standardize column names"""
         cols_map_inv = {v: k for k, v in cols_input.items()}
         self.data = self.data.rename(columns=cols_map_inv)
         self.data = self.data[['time', 'loc', 'prod', 'val']]
 
     def clean_data(self, val_errors_flag_input):
+        """Clean data to remove non-numeric values, handle NA's and duplicates"""
         # Make sure values are numeric
         self.data.val = pd.to_numeric(
             self.data.val, errors=val_errors_flag_input)
@@ -104,15 +105,20 @@ class ComplexityData(object):
         if self.data.val.isnull().values.any():
             warnings.warn('NaN value(s) present, coercing to zero(es)')
             self.data.val.fillna(0, inplace=True)
+
+        # Remove duplicates
         dups = self.data.index.duplicated()
         if dups.sum() > 0:
             warnings.warn(
                 'Duplicate values exist, keeping the first occurrence')
             self.data = self.data[~self.data.index.duplicated()]
 
-    def create_full_df_time(self, t):
-        # Create pandas dataframe with all possible combinations of values
-        # but remove rows with diversity or ubiquity zero
+    def create_full_df(self, t):
+        """Rectangularize, but remove rows with diversity or ubiquity zero
+
+        Rows with zero diversity / ubiquity lead to dividebyzero errors and
+        incorrect values during normzalization
+        """
         self.data_t = self.data.loc[t].copy()
         diversity_check = self.data_t.reset_index().groupby(
             ['loc'])['val'].sum().reset_index()
@@ -130,7 +136,8 @@ class ComplexityData(object):
             self.data_t.index.levels, names=self.data_t.index.names)
         self.data_t = self.data_t.reindex(data_index, fill_value=0)
 
-    def calculate_rca_time(self):
+    def calculate_rca(self):
+        """Calculate RCA"""
         # Convert data into numpy array
         loc_n_vals = len(self.data_t.index.levels[0])
         prod_n_vals = len(self.data_t.index.levels[1])
@@ -144,7 +151,8 @@ class ComplexityData(object):
             den = loc_total / world_total
             self.rca_t = num / den
 
-    def calculate_rpop_time(self, pop, t):
+    def calculate_rpop(self, pop, t):
+        """Calculate RPOP"""
         # After constructing df with all combinations, convert data into ndarray
         loc_n_vals = len(self.data_t.index.levels[0])
         prod_n_vals = len(self.data_t.index.levels[1])
@@ -170,8 +178,9 @@ class ComplexityData(object):
         rpop = num / den
         self.rpop_t = rpop
 
-    def calculate_mcp_time(self, rca_mcp_threshold_input, rpop_mcp_threshold_input,
+    def calculate_mcp(self, rca_mcp_threshold_input, rpop_mcp_threshold_input,
                            presence_test, pop, t):
+        """Calculate MCP based on RCA / RPOP / both"""
         def convert_to_binary(x, threshold):
             x = np.nan_to_num(x)
             x = np.where(x >= threshold, 1, 0)
@@ -181,16 +190,17 @@ class ComplexityData(object):
             self.mcp_t = convert_to_binary(self.rca_t, rca_mcp_threshold_input)
 
         elif presence_test == "rpop":
-            self.calculate_rpop_time(pop, t)
+            self.calculate_rpop(pop, t)
             self.mcp_t = convert_to_binary(
                 self.rca_t, rpop_mcp_threshold_input)
 
         elif presence_test == "both":
-            self.calculate_rpop_time(pop, t)
+            self.calculate_rpop(pop, t)
             self.mcp_t = convert_to_binary(
                 self.rca_t, rca_mcp_threshold_input) + convert_to_binary(self.rca_t, rpop_mcp_threshold_input)
 
-    def calculate_manual_mcp_time(self):
+    def calculate_manual_mcp(self):
+        """If pre-computed MCP supplied, check validity and reshape"""
         # Test to see if indeed MCP
         if np.any(~np.isin(self.data_t.values, [0, 1])):
             error_val = self.data_t.values[~np.isin(
@@ -206,8 +216,8 @@ class ComplexityData(object):
 
         self.mcp_t = data_np
 
-    def reshape_output_to_data_time(self, t):
-
+    def reshape_output_to_data(self, t):
+        """Reshape output ndarrays to df"""
         diversity = self.diversity_t[:, np.newaxis].repeat(
             self.mcp_t.shape[1], axis=1).ravel()
         ubiquity = self.ubiquity_t[np.newaxis, :].repeat(
@@ -246,12 +256,13 @@ class ComplexityData(object):
         self.output_list.append(self.output_t)
 
     def conform_to_original_data(self, cols_input, data):
-        # Reset column names and add dropped columns back
+        """Reset column names and add dropped columns back"""
         self.output = self.output.rename(columns=cols_input)
         self.output = self.output.merge(
             data, how="outer", on=list(cols_input.values()))
 
-    def calculate_Kvec_time(self):
+    def calculate_Kvec(self):
+        """Calculate eigenvectors for PCI and ECI"""
         mcp1 = (self.mcp_t / self.diversity_t[:, np.newaxis])
         mcp2 = (self.mcp_t / self.ubiquity_t[np.newaxis, :])
         # These matrix multiplication lines are very slow
@@ -268,8 +279,8 @@ class ComplexityData(object):
         return(kp, kc)
 
     @staticmethod
-    def sign_time(diversity, eci):
-        return(2*np.sign(np.corrcoef(diversity, eci)[0, 1])-1)
+    def sign(diversity, eci):
+        return(np.sign(np.corrcoef(diversity, eci)[0, 1]))
 
 
 def ecomplexity(data, cols_input, presence_test="rca", val_errors_flag='coerce',
