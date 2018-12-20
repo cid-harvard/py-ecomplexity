@@ -1,6 +1,9 @@
 import numpy as np
 import pandas as pd
+from ecomplexity.calc_proximity import calc_discrete_proximity
+from ecomplexity.calc_proximity import calc_continuous_proximity
 from ecomplexity.ComplexityData import ComplexityData
+from ecomplexity.density import calc_density
 
 def reshape_output_to_data(cdata, t):
     """Reshape output ndarrays to df"""
@@ -12,7 +15,7 @@ def reshape_output_to_data(cdata, t):
         cdata.mcp_t.shape[1], axis=1).ravel()
     pci = cdata.pci_t[np.newaxis, :].repeat(
         cdata.mcp_t.shape[0], axis=0).ravel()
-
+    
     if hasattr(cdata, 'rpop_t'):
         output = pd.DataFrame.from_dict({'diversity': diversity,
                                          'ubiquity': ubiquity,
@@ -20,7 +23,8 @@ def reshape_output_to_data(cdata, t):
                                          'rpop': cdata.rpop_t.ravel(),
                                          'mcp': cdata.mcp_t.ravel(),
                                          'eci': eci,
-                                         'pci': pci}).reset_index(drop=True)
+                                         'pci': pci,
+                                         'density': cdata.density_t.ravel()}).reset_index(drop=True)
 
     elif hasattr(cdata, 'rca_t'):
         output = pd.DataFrame.from_dict({'diversity': diversity,
@@ -28,19 +32,22 @@ def reshape_output_to_data(cdata, t):
                                          'rca': cdata.rca_t.ravel(),
                                          'mcp': cdata.mcp_t.ravel(),
                                          'eci': eci,
-                                         'pci': pci}).reset_index(drop=True)
+                                         'pci': pci,
+                                         'density': cdata.density_t.ravel()}).reset_index(drop=True)
 
     else:
         output = pd.DataFrame.from_dict({'diversity': diversity,
                                          'ubiquity': ubiquity,
                                          'mcp': cdata.mcp_t.ravel(),
                                          'eci': eci,
-                                         'pci': pci}).reset_index(drop=True)
+                                         'pci': pci,
+                                         'density': cdata.density_t.ravel()}).reset_index(drop=True)
 
     cdata.data_t['time'] = t
     cdata.output_t = pd.concat([cdata.data_t.reset_index(), output], axis=1)
     cdata.output_list.append(cdata.output_t)
     return(cdata)
+
 
 def conform_to_original_data(cdata, cols_input, data):
     """Reset column names and add dropped columns back"""
@@ -48,6 +55,7 @@ def conform_to_original_data(cdata, cols_input, data):
     cdata.output = cdata.output.merge(
         data, how="outer", on=list(cols_input.values()))
     return(cdata)
+
 
 def calculate_Kvec(cdata):
     """Calculate eigenvectors for PCI and ECI"""
@@ -66,11 +74,14 @@ def calculate_Kvec(cdata):
     kc = mcp1 @ kp
     return(kp, kc)
 
+
 def sign(diversity, eci):
     return(np.sign(np.corrcoef(diversity, eci)[0, 1]))
 
+
 def ecomplexity(data, cols_input, presence_test="rca", val_errors_flag='coerce',
-                rca_mcp_threshold=1, rpop_mcp_threshold=1, pop=None):
+                rca_mcp_threshold=1, rpop_mcp_threshold=1, pop=None,
+                continuous=False, asymmetric=False):
     """Complexity calculations through the ComplexityData class
 
     Args:
@@ -90,6 +101,12 @@ def ecomplexity(data, cols_input, presence_test="rca", val_errors_flag='coerce',
             *default* 1. Only used if presence_test is not "rca".
         pop: pandas df, with time, location and corresponding population, in that order.
             Not required if presence_test is "rca" (default).
+        continuous: Used to calculate product proximities, indicates whether
+            to consider correlation of every product pair (True) or product
+            co-occurrence (False). *default* False.
+        asymmetric: Used to calculate product proximities, indicates whether
+            to generate asymmetric proximity matrix (True) or symmetric (False).
+            *default* False.
 
     Returns:
         Pandas dataframe containing the data with the following additional columns:
@@ -116,7 +133,7 @@ def ecomplexity(data, cols_input, presence_test="rca", val_errors_flag='coerce',
         if presence_test != "manual":
             cdata.calculate_rca()
             cdata.calculate_mcp(rca_mcp_threshold, rpop_mcp_threshold,
-                                    presence_test, pop, t)
+                                presence_test, pop, t)
         else:
             cdata.calculate_manual_mcp()
 
@@ -135,6 +152,19 @@ def ecomplexity(data, cols_input, presence_test="rca", val_errors_flag='coerce',
         # Normalize ECI and PCI (based on ECI values)
         cdata.pci_t = (cdata.pci_t - cdata.eci_t.mean()) / cdata.eci_t.std()
         cdata.eci_t = (cdata.eci_t - cdata.eci_t.mean()) / cdata.eci_t.std()
+
+        # Calculate proximity and density
+        if continuous == False:
+            prox_mat = calc_discrete_proximity(cdata.mcp_t, cdata.ubiquity_t,
+                                               asymmetric)
+            cdata.density_t = calc_density(cdata.mcp_t, prox_mat)
+        elif continuous == True and presence_test == "rpop":
+            prox_mat = calc_continuous_proximity(
+                cdata.rpop_t, cdata.ubiquity_t)
+            cdata.density_t = calc_density(cdata.rpop_t, prox_mat)
+        elif continuous == True and presence_test != "rpop":
+            prox_mat = calc_continuous_proximity(cdata.rca_t, cdata.ubiquity_t)
+            cdata.density_t = calc_density(cdata.rca_t, prox_mat)
 
         cdata = reshape_output_to_data(cdata, t)
 

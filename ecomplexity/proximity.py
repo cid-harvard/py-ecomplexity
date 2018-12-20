@@ -56,6 +56,7 @@ def proximity(data, cols_input, presence_test="rca", val_errors_flag='coerce',
         cdata.diversity_t = np.nansum(cdata.mcp_t, axis=1)
         cdata.ubiquity_t = np.nansum(cdata.mcp_t, axis=0)
 
+        # Calculate proximity
         if continuous==False:
             prox_mat = calc_discrete_proximity(cdata.mcp_t, cdata.ubiquity_t,
                                                asymmetric)
