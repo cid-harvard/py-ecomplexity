@@ -38,8 +38,7 @@ class ComplexityData(object):
         pci: Product complexity index
     """
 
-    def __init__(self, data, cols_input, presence_test="rca", val_errors_flag='coerce',
-                 rca_mcp_threshold=1, rpop_mcp_threshold=1, pop=None):
+    def __init__(self, data, cols_input, val_errors_flag):
         self.data = data.copy()
 
         # Standardize column names based on input
@@ -47,43 +46,6 @@ class ComplexityData(object):
 
         # Clean data to handle NA's and such
         self.clean_data(val_errors_flag)
-
-        self.output_list = []
-
-        # Iterate over time stamps
-        for t in self.data.index.unique("time"):
-            print(t)
-            # Rectangularize df
-            self.create_full_df(t)
-
-            # Check if Mcp is pre-computed
-            if presence_test != "manual":
-                self.calculate_rca()
-                self.calculate_mcp(rca_mcp_threshold, rpop_mcp_threshold,
-                                        presence_test, pop, t)
-            else:
-                self.calculate_manual_mcp()
-
-            # Calculate diversity and ubiquity
-            self.diversity_t = np.nansum(self.mcp_t, axis=1)
-            self.ubiquity_t = np.nansum(self.mcp_t, axis=0)
-
-            # Calculate ECI and PCI eigenvectors
-            kp, kc = self.calculate_Kvec()
-
-            # Adjust sign of ECI and PCI so it makes sense, as per book
-            s1 = self.sign(self.diversity_t, kc)
-            self.eci_t = s1 * kc
-            self.pci_t = s1 * kp
-
-            # Normalize ECI and PCI (based on ECI values)
-            self.pci_t = (self.pci_t - self.eci_t.mean()) / self.eci_t.std()
-            self.eci_t = (self.eci_t - self.eci_t.mean()) / self.eci_t.std()
-
-            self.reshape_output_to_data(t)
-
-        self.output = pd.concat(self.output_list)
-        self.conform_to_original_data(cols_input, data)
 
     def rename_cols(self, cols_input):
         """Standardize column names"""
@@ -209,69 +171,3 @@ class ComplexityData(object):
             (loc_n_vals, prod_n_vals))
 
         self.mcp_t = data_np
-
-    def reshape_output_to_data(self, t):
-        """Reshape output ndarrays to df"""
-        diversity = self.diversity_t[:, np.newaxis].repeat(
-            self.mcp_t.shape[1], axis=1).ravel()
-        ubiquity = self.ubiquity_t[np.newaxis, :].repeat(
-            self.mcp_t.shape[0], axis=0).ravel()
-        eci = self.eci_t[:, np.newaxis].repeat(
-            self.mcp_t.shape[1], axis=1).ravel()
-        pci = self.pci_t[np.newaxis, :].repeat(
-            self.mcp_t.shape[0], axis=0).ravel()
-
-        if hasattr(self, 'rpop_t'):
-            output = pd.DataFrame.from_dict({'diversity': diversity,
-                                             'ubiquity': ubiquity,
-                                             'rca': self.rca_t.ravel(),
-                                             'rpop': self.rpop_t.ravel(),
-                                             'mcp': self.mcp_t.ravel(),
-                                             'eci': eci,
-                                             'pci': pci}).reset_index(drop=True)
-
-        elif hasattr(self, 'rca_t'):
-            output = pd.DataFrame.from_dict({'diversity': diversity,
-                                             'ubiquity': ubiquity,
-                                             'rca': self.rca_t.ravel(),
-                                             'mcp': self.mcp_t.ravel(),
-                                             'eci': eci,
-                                             'pci': pci}).reset_index(drop=True)
-
-        else:
-            output = pd.DataFrame.from_dict({'diversity': diversity,
-                                             'ubiquity': ubiquity,
-                                             'mcp': self.mcp_t.ravel(),
-                                             'eci': eci,
-                                             'pci': pci}).reset_index(drop=True)
-
-        self.data_t['time'] = t
-        self.output_t = pd.concat([self.data_t.reset_index(), output], axis=1)
-        self.output_list.append(self.output_t)
-
-    def conform_to_original_data(self, cols_input, data):
-        """Reset column names and add dropped columns back"""
-        self.output = self.output.rename(columns=cols_input)
-        self.output = self.output.merge(
-            data, how="outer", on=list(cols_input.values()))
-
-    def calculate_Kvec(self):
-        """Calculate eigenvectors for PCI and ECI"""
-        mcp1 = (self.mcp_t / self.diversity_t[:, np.newaxis])
-        mcp2 = (self.mcp_t / self.ubiquity_t[np.newaxis, :])
-        # These matrix multiplication lines are very slow
-        Mcc = mcp1 @ mcp2.T
-        Mpp = mcp2.T @ mcp1
-
-        # Calculate eigenvectors
-        eigvals, eigvecs = np.linalg.eig(Mpp)
-        eigvecs = np.real(eigvecs)
-        # Get eigenvector corresponding to second largest eigenvalue
-        eig_index = eigvals.argsort()[-2]
-        kp = eigvecs[:, eig_index]
-        kc = mcp1 @ kp
-        return(kp, kc)
-
-    @staticmethod
-    def sign(diversity, eci):
-        return(np.sign(np.corrcoef(diversity, eci)[0, 1]))

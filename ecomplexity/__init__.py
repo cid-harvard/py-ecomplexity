@@ -1,3 +1,3 @@
 from ecomplexity.ComplexityData import ComplexityData
-from ecomplexity.ComplexityData import ecomplexity
+from ecomplexity.ecomplexity import ecomplexity
 name = "ecomplexity"

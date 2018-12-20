@@ -1,9 +1,77 @@
 import numpy as np
 import pandas as pd
+from ecomplexity.ComplexityData import ComplexityData
+
+def reshape_output_to_data(cdata, t):
+    """Reshape output ndarrays to df"""
+    diversity = cdata.diversity_t[:, np.newaxis].repeat(
+        cdata.mcp_t.shape[1], axis=1).ravel()
+    ubiquity = cdata.ubiquity_t[np.newaxis, :].repeat(
+        cdata.mcp_t.shape[0], axis=0).ravel()
+    eci = cdata.eci_t[:, np.newaxis].repeat(
+        cdata.mcp_t.shape[1], axis=1).ravel()
+    pci = cdata.pci_t[np.newaxis, :].repeat(
+        cdata.mcp_t.shape[0], axis=0).ravel()
+
+    if hasattr(cdata, 'rpop_t'):
+        output = pd.DataFrame.from_dict({'diversity': diversity,
+                                         'ubiquity': ubiquity,
+                                         'rca': cdata.rca_t.ravel(),
+                                         'rpop': cdata.rpop_t.ravel(),
+                                         'mcp': cdata.mcp_t.ravel(),
+                                         'eci': eci,
+                                         'pci': pci}).reset_index(drop=True)
+
+    elif hasattr(cdata, 'rca_t'):
+        output = pd.DataFrame.from_dict({'diversity': diversity,
+                                         'ubiquity': ubiquity,
+                                         'rca': cdata.rca_t.ravel(),
+                                         'mcp': cdata.mcp_t.ravel(),
+                                         'eci': eci,
+                                         'pci': pci}).reset_index(drop=True)
+
+    else:
+        output = pd.DataFrame.from_dict({'diversity': diversity,
+                                         'ubiquity': ubiquity,
+                                         'mcp': cdata.mcp_t.ravel(),
+                                         'eci': eci,
+                                         'pci': pci}).reset_index(drop=True)
+
+    cdata.data_t['time'] = t
+    cdata.output_t = pd.concat([cdata.data_t.reset_index(), output], axis=1)
+    cdata.output_list.append(cdata.output_t)
+    return(cdata)
+
+def conform_to_original_data(cdata, cols_input, data):
+    """Reset column names and add dropped columns back"""
+    cdata.output = cdata.output.rename(columns=cols_input)
+    cdata.output = cdata.output.merge(
+        data, how="outer", on=list(cols_input.values()))
+    return(cdata)
+
+def calculate_Kvec(cdata):
+    """Calculate eigenvectors for PCI and ECI"""
+    mcp1 = (cdata.mcp_t / cdata.diversity_t[:, np.newaxis])
+    mcp2 = (cdata.mcp_t / cdata.ubiquity_t[np.newaxis, :])
+    # These matrix multiplication lines are very slow
+    Mcc = mcp1 @ mcp2.T
+    Mpp = mcp2.T @ mcp1
+
+    # Calculate eigenvectors
+    eigvals, eigvecs = np.linalg.eig(Mpp)
+    eigvecs = np.real(eigvecs)
+    # Get eigenvector corresponding to second largest eigenvalue
+    eig_index = eigvals.argsort()[-2]
+    kp = eigvecs[:, eig_index]
+    kc = mcp1 @ kp
+    return(kp, kc)
+
+def sign(diversity, eci):
+    return(np.sign(np.corrcoef(diversity, eci)[0, 1]))
 
 def ecomplexity(data, cols_input, presence_test="rca", val_errors_flag='coerce',
                 rca_mcp_threshold=1, rpop_mcp_threshold=1, pop=None):
-    """Wrapper for complexity calculations through the ComplexityData class
+    """Complexity calculations through the ComplexityData class
 
     Args:
         data: pandas dataframe containing production / trade data.
@@ -34,6 +102,43 @@ def ecomplexity(data, cols_input, presence_test="rca", val_errors_flag='coerce',
             - pci: Product complexity index
 
     """
-    cdata = ComplexityData(data, cols_input, presence_test,
-                           val_errors_flag, rca_mcp_threshold, rpop_mcp_threshold, pop)
+    cdata = ComplexityData(data, cols_input, val_errors_flag)
+
+    cdata.output_list = []
+
+    # Iterate over time stamps
+    for t in cdata.data.index.unique("time"):
+        print(t)
+        # Rectangularize df
+        cdata.create_full_df(t)
+
+        # Check if Mcp is pre-computed
+        if presence_test != "manual":
+            cdata.calculate_rca()
+            cdata.calculate_mcp(rca_mcp_threshold, rpop_mcp_threshold,
+                                    presence_test, pop, t)
+        else:
+            cdata.calculate_manual_mcp()
+
+        # Calculate diversity and ubiquity
+        cdata.diversity_t = np.nansum(cdata.mcp_t, axis=1)
+        cdata.ubiquity_t = np.nansum(cdata.mcp_t, axis=0)
+
+        # Calculate ECI and PCI eigenvectors
+        kp, kc = calculate_Kvec(cdata)
+
+        # Adjust sign of ECI and PCI so it makes sense, as per book
+        s1 = sign(cdata.diversity_t, kc)
+        cdata.eci_t = s1 * kc
+        cdata.pci_t = s1 * kp
+
+        # Normalize ECI and PCI (based on ECI values)
+        cdata.pci_t = (cdata.pci_t - cdata.eci_t.mean()) / cdata.eci_t.std()
+        cdata.eci_t = (cdata.eci_t - cdata.eci_t.mean()) / cdata.eci_t.std()
+
+        cdata = reshape_output_to_data(cdata, t)
+
+    cdata.output = pd.concat(cdata.output_list)
+    cdata = conform_to_original_data(cdata, cols_input, data)
+
     return(cdata.output)
