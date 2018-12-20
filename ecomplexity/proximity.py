@@ -59,7 +59,9 @@ def proximity(data, cols_input, presence_test="rca", val_errors_flag='coerce',
         if continuous==False:
             prox_mat = calc_discrete_proximity(cdata.mcp_t, cdata.ubiquity_t,
                                                asymmetric)
-        elif continuous==True:
+        elif continuous==True and presence_test=="rpop":
+            prox_mat = calc_continuous_proximity(cdata.rpop_t, cdata.ubiquity_t)
+        elif continuous==True and presence_test!="rpop":
             prox_mat = calc_continuous_proximity(cdata.rca_t, cdata.ubiquity_t)
 
         # Reshape as df
