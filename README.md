@@ -1,5 +1,7 @@
 # Economic Complexity and Product Complexity
 
+NOTE: Density calculations not yet tested! COI and COG calculations are in the pipeline.
+
 Python package to calculate economic complexity indices.
 
 STATA implementation of the economic complexity index available at: https://github.com/cid-harvard/ecomplexity
