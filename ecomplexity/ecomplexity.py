@@ -86,7 +86,7 @@ def ecomplexity(data, cols_input, presence_test="rca", val_errors_flag='coerce',
             *default* coerce.
         rca_mcp_threshold: numeric indicating RCA threshold beyond which mcp is 1.
             *default* 1.
-        rca_mcp_threshold: numeric indicating RPOP threshold beyond which mcp is 1.
+        rpop_mcp_threshold: numeric indicating RPOP threshold beyond which mcp is 1.
             *default* 1. Only used if presence_test is not "rca".
         pop: pandas df, with time, location and corresponding population, in that order.
             Not required if presence_test is "rca" (default).

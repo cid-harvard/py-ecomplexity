@@ -15,27 +15,11 @@ class ComplexityData(object):
             Including variables indicating time, location, product and value
         cols_input: dict of column names for time, location, product and value.
             Example: {'time':'year', 'loc':'origin', 'prod':'hs92', 'val':'export_val'}
-        presence_test: str for test used for presence of industry in location.
-            One of "rca" (default), "rpop", "both", or "manual".
-            Determines which values are used for M_cp calculations.
-            If "manual", M_cp is taken as given from the "value" column in data
         val_errors_flag: {'coerce','ignore','raise'}. Passed to pd.to_numeric
             *default* coerce.
-        rca_mcp_threshold: numeric indicating RCA threshold beyond which mcp is 1.
-            *default* 1.
-        rca_mcp_threshold: numeric indicating RPOP threshold beyond which mcp is 1.
-            *default* 1. Only used if presence_test is not "rca".
-        pop: pandas df, with time, location and corresponding population, in that order.
-            Not required if presence_test is "rca" (default).
 
     Attributes:
-        diversity: k_c,0
-        ubiquity: k_p,0
-        rca: Balassa's RCA
-        rpop: (available if presence_test!="rca") RPOP
-        mcp: MCP used for complexity calculations
-        eci: Economic complexity index
-        pci: Product complexity index
+        data: clean data with standardized column names
     """
 
     def __init__(self, data, cols_input, val_errors_flag):
