@@ -16,7 +16,7 @@ def calc_density(rca_or_mcp, proximity_mat):
         numpy array of same shape as proximity_mat corresponding to density of
         each product
     """
-    den = np.nansum(proximity_mat, axis=0)[np.newaxis, :]
+    den = np.nansum(proximity_mat, axis=1)[np.newaxis, :]
     # density = rca_or_mcp @ (proximity_mat / den)
     density = rca_or_mcp @ (proximity_mat.T / den)
     return(density)

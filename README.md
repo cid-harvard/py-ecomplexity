@@ -28,7 +28,7 @@ trade_cols = {'time':'year', 'loc':'location_code', 'prod':'hs_product_code', 'v
 cdata = ecomplexity(data, trade_cols)
 
 # Calculate proximity matrix
-cdata = proximity(data, trade_cols)
+prox_df = proximity(data, trade_cols)
 ```
 
 ### TODO:

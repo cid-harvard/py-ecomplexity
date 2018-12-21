@@ -15,33 +15,22 @@ def reshape_output_to_data(cdata, t):
         cdata.mcp_t.shape[1], axis=1).ravel()
     pci = cdata.pci_t[np.newaxis, :].repeat(
         cdata.mcp_t.shape[0], axis=0).ravel()
-    
+
+    out_dict = {'diversity': diversity,
+                'ubiquity': ubiquity,
+                'mcp': cdata.mcp_t.ravel(),
+                'eci': eci,
+                'pci': pci,
+                'density': cdata.density_t.ravel()}
+
     if hasattr(cdata, 'rpop_t'):
-        output = pd.DataFrame.from_dict({'diversity': diversity,
-                                         'ubiquity': ubiquity,
-                                         'rca': cdata.rca_t.ravel(),
-                                         'rpop': cdata.rpop_t.ravel(),
-                                         'mcp': cdata.mcp_t.ravel(),
-                                         'eci': eci,
-                                         'pci': pci,
-                                         'density': cdata.density_t.ravel()}).reset_index(drop=True)
+        out_dict['rca'] = cdata.rca_t.ravel()
+        out_dict['rpop'] = cdata.rpop_t.ravel()
 
     elif hasattr(cdata, 'rca_t'):
-        output = pd.DataFrame.from_dict({'diversity': diversity,
-                                         'ubiquity': ubiquity,
-                                         'rca': cdata.rca_t.ravel(),
-                                         'mcp': cdata.mcp_t.ravel(),
-                                         'eci': eci,
-                                         'pci': pci,
-                                         'density': cdata.density_t.ravel()}).reset_index(drop=True)
+        out_dict['rca'] = cdata.rca_t.ravel()
 
-    else:
-        output = pd.DataFrame.from_dict({'diversity': diversity,
-                                         'ubiquity': ubiquity,
-                                         'mcp': cdata.mcp_t.ravel(),
-                                         'eci': eci,
-                                         'pci': pci,
-                                         'density': cdata.density_t.ravel()}).reset_index(drop=True)
+    output = pd.DataFrame.from_dict(out_dict).reset_index(drop=True)
 
     cdata.data_t['time'] = t
     cdata.output_t = pd.concat([cdata.data_t.reset_index(), output], axis=1)
@@ -77,6 +66,20 @@ def calculate_Kvec(cdata):
 
 def sign(diversity, eci):
     return(np.sign(np.corrcoef(diversity, eci)[0, 1]))
+
+def calc_eci_pci(cdata):
+    # Calculate ECI and PCI eigenvectors
+    kp, kc = calculate_Kvec(cdata)
+
+    # Adjust sign of ECI and PCI so it makes sense, as per book
+    s1 = sign(cdata.diversity_t, kc)
+    cdata.eci_t = s1 * kc
+    cdata.pci_t = s1 * kp
+
+    # Normalize ECI and PCI (based on ECI values)
+    cdata.pci_t = (cdata.pci_t - cdata.eci_t.mean()) / cdata.eci_t.std()
+    cdata.eci_t = (cdata.eci_t - cdata.eci_t.mean()) / cdata.eci_t.std()
+    return(cdata)
 
 
 def ecomplexity(data, cols_input, presence_test="rca", val_errors_flag='coerce',
@@ -141,17 +144,8 @@ def ecomplexity(data, cols_input, presence_test="rca", val_errors_flag='coerce',
         cdata.diversity_t = np.nansum(cdata.mcp_t, axis=1)
         cdata.ubiquity_t = np.nansum(cdata.mcp_t, axis=0)
 
-        # Calculate ECI and PCI eigenvectors
-        kp, kc = calculate_Kvec(cdata)
-
-        # Adjust sign of ECI and PCI so it makes sense, as per book
-        s1 = sign(cdata.diversity_t, kc)
-        cdata.eci_t = s1 * kc
-        cdata.pci_t = s1 * kp
-
-        # Normalize ECI and PCI (based on ECI values)
-        cdata.pci_t = (cdata.pci_t - cdata.eci_t.mean()) / cdata.eci_t.std()
-        cdata.eci_t = (cdata.eci_t - cdata.eci_t.mean()) / cdata.eci_t.std()
+        # Calculate ECI and PCI
+        cdata = calc_eci_pci(cdata)
 
         # Calculate proximity and density
         if continuous == False:
@@ -166,6 +160,10 @@ def ecomplexity(data, cols_input, presence_test="rca", val_errors_flag='coerce',
             prox_mat = calc_continuous_proximity(cdata.rca_t, cdata.ubiquity_t)
             cdata.density_t = calc_density(cdata.rca_t, prox_mat)
 
+        # # Calculate COI and COG
+        # cdata = calc_coi_cog(cdata)
+
+        # Reshape ndarrays to df
         cdata = reshape_output_to_data(cdata, t)
 
     cdata.output = pd.concat(cdata.output_list)
