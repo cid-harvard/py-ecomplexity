@@ -4,6 +4,7 @@ from ecomplexity.calc_proximity import calc_discrete_proximity
 from ecomplexity.calc_proximity import calc_continuous_proximity
 from ecomplexity.ComplexityData import ComplexityData
 from ecomplexity.density import calc_density
+from ecomplexity.coicog import calc_coi_cog
 
 def reshape_output_to_data(cdata, t):
     """Reshape output ndarrays to df"""
@@ -15,13 +16,17 @@ def reshape_output_to_data(cdata, t):
         cdata.mcp_t.shape[1], axis=1).ravel()
     pci = cdata.pci_t[np.newaxis, :].repeat(
         cdata.mcp_t.shape[0], axis=0).ravel()
+    coi = cdata.coi_t[:, np.newaxis].repeat(
+        cdata.mcp_t.shape[1], axis=1).ravel()
 
     out_dict = {'diversity': diversity,
                 'ubiquity': ubiquity,
                 'mcp': cdata.mcp_t.ravel(),
                 'eci': eci,
                 'pci': pci,
-                'density': cdata.density_t.ravel()}
+                'density': cdata.density_t.ravel(),
+                'coi': coi,
+                'cog': cdata.cog_t.ravel()}
 
     if hasattr(cdata, 'rpop_t'):
         out_dict['rca'] = cdata.rca_t.ravel()
@@ -45,9 +50,8 @@ def conform_to_original_data(cdata, cols_input, data):
         data, how="outer", on=list(cols_input.values()))
     return(cdata)
 
-
-def calculate_Kvec(cdata):
-    """Calculate eigenvectors for PCI and ECI"""
+def calc_eci_pci(cdata):
+    # Calculate ECI and PCI eigenvectors
     mcp1 = (cdata.mcp_t / cdata.diversity_t[:, np.newaxis])
     mcp2 = (cdata.mcp_t / cdata.ubiquity_t[np.newaxis, :])
     # These matrix multiplication lines are very slow
@@ -61,25 +65,13 @@ def calculate_Kvec(cdata):
     eig_index = eigvals.argsort()[-2]
     kp = eigvecs[:, eig_index]
     kc = mcp1 @ kp
-    return(kp, kc)
-
-
-def sign(diversity, eci):
-    return(np.sign(np.corrcoef(diversity, eci)[0, 1]))
-
-def calc_eci_pci(cdata):
-    # Calculate ECI and PCI eigenvectors
-    kp, kc = calculate_Kvec(cdata)
 
     # Adjust sign of ECI and PCI so it makes sense, as per book
-    s1 = sign(cdata.diversity_t, kc)
-    cdata.eci_t = s1 * kc
-    cdata.pci_t = s1 * kp
+    s1 = np.sign(np.corrcoef(cdata.diversity_t, kc)[0, 1])
+    eci_t = s1 * kc
+    pci_t = s1 * kp
 
-    # Normalize ECI and PCI (based on ECI values)
-    cdata.pci_t = (cdata.pci_t - cdata.eci_t.mean()) / cdata.eci_t.std()
-    cdata.eci_t = (cdata.eci_t - cdata.eci_t.mean()) / cdata.eci_t.std()
-    return(cdata)
+    return(eci_t, pci_t)
 
 
 def ecomplexity(data, cols_input, presence_test="rca", val_errors_flag='coerce',
@@ -145,7 +137,7 @@ def ecomplexity(data, cols_input, presence_test="rca", val_errors_flag='coerce',
         cdata.ubiquity_t = np.nansum(cdata.mcp_t, axis=0)
 
         # Calculate ECI and PCI
-        cdata = calc_eci_pci(cdata)
+        cdata.eci_t, cdata.pci_t = calc_eci_pci(cdata)
 
         # Calculate proximity and density
         if continuous == False:
@@ -153,15 +145,18 @@ def ecomplexity(data, cols_input, presence_test="rca", val_errors_flag='coerce',
                                                asymmetric)
             cdata.density_t = calc_density(cdata.mcp_t, prox_mat)
         elif continuous == True and presence_test == "rpop":
-            prox_mat = calc_continuous_proximity(
-                cdata.rpop_t, cdata.ubiquity_t)
+            prox_mat = calc_continuous_proximity(cdata.rpop_t, cdata.ubiquity_t)
             cdata.density_t = calc_density(cdata.rpop_t, prox_mat)
         elif continuous == True and presence_test != "rpop":
             prox_mat = calc_continuous_proximity(cdata.rca_t, cdata.ubiquity_t)
             cdata.density_t = calc_density(cdata.rca_t, prox_mat)
 
-        # # Calculate COI and COG
-        # cdata = calc_coi_cog(cdata)
+        # Calculate COI and COG
+        cdata.coi_t, cdata.cog_t = calc_coi_cog(cdata, prox_mat)
+
+        # Normalize variables as per STATA package
+        cdata.pci_t = (cdata.pci_t - cdata.eci_t.mean()) / cdata.eci_t.std()
+        cdata.eci_t = (cdata.eci_t - cdata.eci_t.mean()) / cdata.eci_t.std()
 
         # Reshape ndarrays to df
         cdata = reshape_output_to_data(cdata, t)
