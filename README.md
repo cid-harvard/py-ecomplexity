@@ -1,6 +1,6 @@
 # Economic Complexity and Product Complexity
 
-NOTE: Density calculations not yet tested! COI and COG calculations are in the pipeline.
+NOTE: Density calculations not yet tested! ECI, PCI, diversity and ubiquity tested.
 
 Python package to calculate economic complexity indices.
 
@@ -16,6 +16,7 @@ At terminal: `pip install git+https://github.com/cid-harvard/py-ecomplexity@mast
 **Usage**:
 ```python
 from ecomplexity import ecomplexity
+from ecomplexity import proximity
 
 # Import trade data from CID Atlas
 data_url = "https://intl-atlas-downloads.s3.amazonaws.com/country_hsproduct2digit_year.csv.zip"
@@ -25,19 +26,16 @@ data = data[['year','location_code','hs_product_code','export_value']]
 # Calculate complexity
 trade_cols = {'time':'year', 'loc':'location_code', 'prod':'hs_product_code', 'val':'export_value'}
 cdata = ecomplexity(data, trade_cols)
+
+# Calculate proximity matrix
+cdata = proximity(data, trade_cols)
 ```
-
-### Notes
-
-Currently, this handles NaN's by coercing them to zero. This is true for both NaN's in the trade / production values, and those in the population values (for rpop)
-
-For our test dataset containing world trade, the STATA ecomplexity package takes around 4.88 mins, and the py-ecomplexity package takes around 40 seconds. This will be even faster if parallelized.
 
 ### TODO:
 
-- Make the data outputs conform to stata output format. Currently ndarrays, convert to pandas df's with time, location and products explicitly listed.
-- Test the code against stata output
-- Parallellize the numpy vectorization. Currently runs on a single thread on a single core.
+- Test density, make it conform to STATA package outputs
+- Develop COI, COG calculations
+- knn options for density: in the future, allow knn parameter for density calculation
 
 The aim is to replicate the STATA ecomplexity package's features:
 - Args:
