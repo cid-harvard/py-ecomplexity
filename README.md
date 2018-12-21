@@ -33,3 +33,7 @@ prox_df = proximity(data, trade_cols)
 
 - There are very minor differences in the values of density, COI and COG between STATA and Python due to the way matrix computations are handled by the two. These should be aligned in the future.
 - knn options for density: in the future, allow knn parameter for density calculation
+
+### References:
+- Hausmann, R., Hidalgo, C. A., Bustos, S., Coscia, M., Simoes, A., & Yıldırım, M. (2013). The Atlas of Economic Complexity: Mapping Paths to Prosperity (Part 1). Retrieved from https://growthlab.cid.harvard.edu/files/growthlab/files/atlas_2013_part1.pdf
+- Hidalgo, C. A., Klinger, B., Barabasi, A.-L., & Hausmann, R. (2007). The Product Space Conditions the Development of Nations. Science, 317(5837), 482–487. http://doi.org/10.1126/science.1144581
