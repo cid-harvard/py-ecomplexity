@@ -156,7 +156,10 @@ def ecomplexity(data, cols_input, presence_test="rca", val_errors_flag='coerce',
 
         # Normalize variables as per STATA package
         cdata.pci_t = (cdata.pci_t - cdata.eci_t.mean()) / cdata.eci_t.std()
+        cdata.cog_t = cdata.cog_t / cdata.eci_t.std()
         cdata.eci_t = (cdata.eci_t - cdata.eci_t.mean()) / cdata.eci_t.std()
+        
+        cdata.coi_t = (cdata.coi_t - cdata.coi_t.mean()) / cdata.coi_t.std()
 
         # Reshape ndarrays to df
         cdata = reshape_output_to_data(cdata, t)
