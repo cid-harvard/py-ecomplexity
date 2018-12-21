@@ -1,7 +1,5 @@
 # Economic Complexity and Product Complexity
 
-NOTE: Density calculations not yet tested! ECI, PCI, diversity and ubiquity tested.
-
 Python package to calculate economic complexity indices.
 
 STATA implementation of the economic complexity index available at: https://github.com/cid-harvard/ecomplexity
@@ -33,28 +31,5 @@ prox_df = proximity(data, trade_cols)
 
 ### TODO:
 
-- Test density, make it conform to STATA package outputs
-- Develop COI, COG calculations
+- There are very minor differences in the values of density, COI and COG between STATA and Python due to the way matrix computations are handled by the two. These should be aligned in the future.
 - knn options for density: in the future, allow knn parameter for density calculation
-
-The aim is to replicate the STATA ecomplexity package's features:
-- Args:
-    + dict: colnames for time,loc,prod,val
-    + rca_mcp_threshold: mcp cutoff
-    + rpop
-    + pop
-    + cont
-    + asym
-    + knn
-
-- Returns: pandas df with original data and following additional cols:
-    + eci
-    + pci
-    + density
-    + coi
-    + cog
-    + diversity
-    + ubiquity
-    + rca
-    + rpop
-    + M
