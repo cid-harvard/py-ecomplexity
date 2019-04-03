@@ -9,7 +9,7 @@ Explore complexity and associated data using Harvard CID's Atlas tool: http://at
 ### Tutorial
 
 **Installation**:
-At terminal: `pip install git+https://github.com/cid-harvard/py-ecomplexity@master`
+At terminal: `pip install ecomplexity`
 
 **Usage**:
 ```python
@@ -27,6 +27,31 @@ cdata = ecomplexity(data, trade_cols)
 
 # Calculate proximity matrix
 prox_df = proximity(data, trade_cols)
+```
+**Arguments**:
+```
+data: pandas dataframe containing production / trade data.
+    Including variables indicating time, location, product and value
+cols_input: dict of column names for time, location, product and value.
+    Example: {'time':'year', 'loc':'origin', 'prod':'hs92', 'val':'export_val'}
+presence_test: str for test used for presence of industry in location.
+    One of "rca" (default), "rpop", "both", or "manual".
+    Determines which values are used for M_cp calculations.
+    If "manual", M_cp is taken as given from the "value" column in data
+val_errors_flag: {'coerce','ignore','raise'}. Passed to pd.to_numeric
+    *default* coerce.
+rca_mcp_threshold: numeric indicating RCA threshold beyond which mcp is 1.
+    *default* 1.
+rpop_mcp_threshold: numeric indicating RPOP threshold beyond which mcp is 1.
+    *default* 1. Only used if presence_test is not "rca".
+pop: pandas df, with time, location and corresponding population, in that order.
+    Not required if presence_test is "rca" (default).
+continuous: Used to calculate product proximities, indicates whether
+    to consider correlation of every product pair (True) or product
+    co-occurrence (False). *default* False.
+asymmetric: Used to calculate product proximities, indicates whether
+    to generate asymmetric proximity matrix (True) or symmetric (False).
+    *default* False.
 ```
 
 ### TODO:

@@ -112,6 +112,9 @@ def ecomplexity(data, cols_input, presence_test="rca", val_errors_flag='coerce',
             - mcp: MCP used for complexity calculations
             - eci: Economic complexity index
             - pci: Product complexity index
+            - density: Density of the network around each product
+            - coi: Complexity Outlook Index
+            - cog: Complexity Outlook Gain
 
     """
     cdata = ComplexityData(data, cols_input, val_errors_flag)

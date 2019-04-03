@@ -5,7 +5,7 @@ def readme():
         return f.read()
 
 setup(name='ecomplexity',
-      version='0.3',
+      version='0.4',
       description='Package to calculate economic complexity and associated variables',
       long_description=readme(),
       url='https://github.com/cid-harvard/py-ecomplexity',
