@@ -10,7 +10,7 @@ setup(name='ecomplexity',
       long_description=readme(),
       url='https://github.com/cid-harvard/py-ecomplexity',
       author='Shreyas Gadgin Matha',
-      author_email='shreyas_gadgin_matha@hks.harvard.edu',
+      author_email='shreyas.gm61@gmail.com',
       license='MIT',
       packages=find_packages(),
       keywords="pandas python networks economics complexity",
@@ -19,4 +19,9 @@ setup(name='ecomplexity',
           'pandas >0.23.0',
           'numpy >1.15.0'
       ],
-      zip_safe=False)
+      zip_safe=False,
+      classifiers=[
+          "Programming Language :: Python :: 3",
+          "License :: OSI Approved :: MIT License",
+          "Operating System :: OS Independent",
+      ])
