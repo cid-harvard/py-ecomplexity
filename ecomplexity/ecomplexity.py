@@ -1,5 +1,7 @@
 import numpy as np
 import pandas as pd
+import tqdm
+
 from ecomplexity.calc_proximity import calc_discrete_proximity
 from ecomplexity.calc_proximity import calc_continuous_proximity
 from ecomplexity.ComplexityData import ComplexityData
@@ -76,7 +78,7 @@ def calc_eci_pci(cdata):
 
 def ecomplexity(data, cols_input, presence_test="rca", val_errors_flag='coerce',
                 rca_mcp_threshold=1, rpop_mcp_threshold=1, pop=None,
-                continuous=False, asymmetric=False):
+                continuous=False, asymmetric=False, verbose=1):
     """Complexity calculations through the ComplexityData class
 
     Args:
@@ -102,6 +104,7 @@ def ecomplexity(data, cols_input, presence_test="rca", val_errors_flag='coerce',
         asymmetric: Used to calculate product proximities, indicates whether
             to generate asymmetric proximity matrix (True) or symmetric (False).
             *default* False.
+        verbose: Outputs processing progress to stdout
 
     Returns:
         Pandas dataframe containing the data with the following additional columns:
@@ -121,9 +124,12 @@ def ecomplexity(data, cols_input, presence_test="rca", val_errors_flag='coerce',
 
     cdata.output_list = []
 
+    time_data = cdata.data.index.unique("time")
+    if verbose > 0:
+        time_data = tqdm.tqdm(time_data)
+
     # Iterate over time stamps
-    for t in cdata.data.index.unique("time"):
-        print(t)
+    for t in time_data:
         # Rectangularize df
         cdata.create_full_df(t)
 

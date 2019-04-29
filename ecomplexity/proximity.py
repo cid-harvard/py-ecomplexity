@@ -1,12 +1,14 @@
 import pandas as pd
 import numpy as np
+import tqdm
+
 from ecomplexity.calc_proximity import calc_discrete_proximity
 from ecomplexity.calc_proximity import calc_continuous_proximity
 from ecomplexity.ComplexityData import ComplexityData
 
 def proximity(data, cols_input, presence_test="rca", val_errors_flag='coerce',
               rca_mcp_threshold=1, rpop_mcp_threshold=1, pop=None,
-              continuous=False, asymmetric=False):
+              continuous=False, asymmetric=False, verbose=1):
     """Wrapper function to calculate product proximity matrices
 
     Args:
@@ -29,6 +31,7 @@ def proximity(data, cols_input, presence_test="rca", val_errors_flag='coerce',
             or product co-occurrence (False). *default* False.
         asymmetric: Whether to generate asymmetric proximity matrix (True) or
             symmetric (False). *default* False.
+        verbose:  Outputs processing progress to stdout
 
     Returns:
         pandas df with proximity values for every product pair
@@ -38,8 +41,12 @@ def proximity(data, cols_input, presence_test="rca", val_errors_flag='coerce',
 
     output_list = []
 
+    time_data = cdata.data.index.unique("time")
+    if verbose > 0:
+        time_data = tqdm.tqdm(cdata.data.index.unique("time"))
+
     # Iterate over time stamps
-    for t in cdata.data.index.unique("time"):
+    for t in time_data:
         print(t)
         # Rectangularize df
         cdata.create_full_df(t)
