@@ -67,7 +67,8 @@ def proximity(data, cols_input, presence_test="rca", val_errors_flag='coerce',
 
         # Reshape as df
         output_index = pd.MultiIndex.from_product([cdata.data_t.index.levels[1],
-                                                   cdata.data_t.index.levels[1]])
+                                                   cdata.data_t.index.levels[1]],
+                                                  names=['prod1','prod2'])
         output = pd.DataFrame(data={'proximity':prox_mat.ravel()},
                               index=output_index)
         output['time'] = t
