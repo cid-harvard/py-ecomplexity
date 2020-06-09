@@ -158,7 +158,7 @@ def ecomplexity(data, cols_input, presence_test="rca", val_errors_flag='coerce',
         cdata.coi_t, cdata.cog_t = calc_coi_cog(cdata, prox_mat)
 
         # Normalize variables as per STATA package
-        cdata.pci_t = (cdata.pci_t - cdata.eci_t.mean()) / cdata.eci_t.std()
+        cdata.pci_t = (cdata.pci_t - cdata.pci_t.mean()) / cdata.pci_t.std()
         cdata.cog_t = cdata.cog_t / cdata.eci_t.std()
         cdata.eci_t = (cdata.eci_t - cdata.eci_t.mean()) / cdata.eci_t.std()
         
