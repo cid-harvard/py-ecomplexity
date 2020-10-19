@@ -1,5 +1,8 @@
 # Economic Complexity and Product Complexity
+## by the Growth Lab at Harvard's Center for International Development
+This package is part of Harvard Growth Lab’s portfolio of software packages, digital products and interactive data visualizations. To browse our entire portfolio, please visit growthlab.app. To learn more about our research, please visit [Harvard Growth Lab’s home page](https://growthlab.cid.harvard.edu/).
 
+# About
 Python package to calculate economic complexity indices.
 
 STATA implementation of the economic complexity index available at: https://github.com/cid-harvard/ecomplexity
