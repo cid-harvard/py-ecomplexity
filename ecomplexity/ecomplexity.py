@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+import warnings
 from ecomplexity.calc_proximity import calc_discrete_proximity
 from ecomplexity.calc_proximity import calc_continuous_proximity
 from ecomplexity.ComplexityData import ComplexityData
@@ -55,25 +56,62 @@ def conform_to_original_data(cdata, data):
 
 
 def calc_eci_pci(cdata):
+    # Check if diversity or ubiquity is 0 or nan, can cause problems
+    cntry_mask = np.argwhere(
+        np.isnan(cdata.diversity_t) | (cdata.diversity_t == 0)
+    ).squeeze()
+    prod_mask = np.argwhere(
+        np.isnan(cdata.ubiquity_t) | (cdata.ubiquity_t == 0)
+    ).squeeze()
+
+    # Extract valid elements only
+    if ((cdata.diversity_t == 0).sum() > 0) | ((cdata.ubiquity_t == 0).sum() > 0):
+        warnings.warn(
+            f"In year {cdata.t}, diversity / ubiquity is 0 for some locs/prods"
+        )
+
+    cntry_mask = np.argwhere(cdata.diversity_t == 0)
+    prod_mask = np.argwhere(cdata.ubiquity_t == 0)
+    diversity_valid = cdata.diversity_t[cdata.diversity_t != 0]
+    ubiquity_valid = cdata.ubiquity_t[cdata.ubiquity_t != 0]
+    mcp_valid = cdata.mcp_t[cdata.diversity_t != 0, :][:, cdata.ubiquity_t != 0]
+
     # Calculate ECI and PCI eigenvectors
-    mcp1 = cdata.mcp_t / cdata.diversity_t[:, np.newaxis]
-    mcp2 = cdata.mcp_t / cdata.ubiquity_t[np.newaxis, :]
+    mcp1 = mcp_valid / diversity_valid[:, np.newaxis]
+    mcp2 = mcp_valid / ubiquity_valid[np.newaxis, :]
+    # Make copy of transpose to ensure contiguous array for performance reasons
+    mcp2_t = mcp2.T.copy()
     # These matrix multiplication lines are very slow
-    Mcc = mcp1 @ mcp2.T
-    Mpp = mcp2.T @ mcp1
+    Mcc = mcp1 @ mcp2_t
+    Mpp = mcp2_t @ mcp1
 
-    # Calculate eigenvectors
-    eigvals, eigvecs = np.linalg.eig(Mpp)
-    eigvecs = np.real(eigvecs)
-    # Get eigenvector corresponding to second largest eigenvalue
-    eig_index = eigvals.argsort()[-2]
-    kp = eigvecs[:, eig_index]
-    kc = mcp1 @ kp
+    try:
+        # Calculate eigenvectors
+        eigvals, eigvecs = np.linalg.eig(Mpp)
+        eigvecs = np.real(eigvecs)
+        # Get eigenvector corresponding to second largest eigenvalue
+        eig_index = eigvals.argsort()[-2]
+        kp = eigvecs[:, eig_index]
+        kc = mcp1 @ kp
 
-    # Adjust sign of ECI and PCI so it makes sense, as per book
-    s1 = np.sign(np.corrcoef(cdata.diversity_t, kc)[0, 1])
-    eci_t = s1 * kc
-    pci_t = s1 * kp
+        # Adjust sign of ECI and PCI so it makes sense, as per book
+        s1 = np.sign(np.corrcoef(diversity_valid, kc)[0, 1])
+        eci_t = s1 * kc
+        pci_t = s1 * kp
+
+        # Add back the deleted elements
+        for x in cntry_mask:
+            eci_t = np.insert(eci_t, x, np.nan)
+        for x in prod_mask:
+            pci_t = np.insert(pci_t, x, np.nan)
+
+    except Exception as e:
+        warnings.warn(f"Unable to calculate eigenvectors for year {cdata.t}")
+        print(e)
+        eci_t = np.empty(cdata.mcp_t.shape[0])
+        pci_t = np.empty(cdata.mcp_t.shape[1])
+        eci_t[:] = np.nan
+        pci_t[:] = np.nan
 
     return (eci_t, pci_t)
 
@@ -88,6 +126,7 @@ def ecomplexity(
     pop=None,
     continuous=False,
     asymmetric=False,
+    verbose=True,
 ):
     """Complexity calculations through the ComplexityData class
 
@@ -114,6 +153,7 @@ def ecomplexity(
         asymmetric: Used to calculate product proximities, indicates whether
             to generate asymmetric proximity matrix (True) or symmetric (False).
             *default* False.
+        verbose: Print year being processed
 
     Returns:
         Pandas dataframe containing the data with the following additional columns:
@@ -135,7 +175,8 @@ def ecomplexity(
 
     # Iterate over time stamps
     for t in cdata.data.index.unique("time"):
-        print(t)
+        if verbose:
+            print(t)
         # Rectangularize df
         cdata.create_full_df(t)
 

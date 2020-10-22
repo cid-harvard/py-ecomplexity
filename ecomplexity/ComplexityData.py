@@ -60,6 +60,7 @@ class ComplexityData(object):
         Rows with zero diversity / ubiquity lead to dividebyzero errors and
         incorrect values during normzalization
         """
+        self.t = t
         self.data_t = self.data.loc[t].copy()
         diversity_check = (
             self.data_t.reset_index().groupby(["loc"])["val"].sum().reset_index()
@@ -104,15 +105,16 @@ class ComplexityData(object):
 
         # Read population data for selected year
         pop_t = pop[pop[self.cols_input["time"]] == t].copy()
-        cols_map_inv = {v: k for k, v in self.cols_input.items()}
-        pop_t = pop_t.rename(columns=cols_map_inv)
+        pop_t.columns = ["time", "loc", "pop"]
         pop_t = pop_t.drop(columns="time")
 
         pop_t = pop_t.reset_index(drop=True).set_index("loc")
         pop_index = self.data_t.index.unique("loc")
         pop_t = pop_t.reindex(pop_index)
         pop_t = pop_t.values
-        assert pop_t.shape == data_np.shape
+        assert (
+            pop_t.shape[0] == data_np.shape[0]
+        ), f"Year {t}: Trade and population data have to be available for the same countries / locations"
 
         num = data_np / pop_t
         loc_total = np.nansum(data_np, axis=0)[np.newaxis, :]
