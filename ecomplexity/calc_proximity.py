@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 
+
 def calc_discrete_proximity(mcp, ubiquity, asymmetric=False):
     """Calculate product proximity matrices - discrete
 
@@ -16,16 +17,17 @@ def calc_discrete_proximity(mcp, ubiquity, asymmetric=False):
 
     # Calculate discrete proximity
     phi = mcp.T @ mcp
-    phi = (phi / ubiquity[np.newaxis, :])
+    phi = phi / ubiquity[np.newaxis, :]
 
-    if asymmetric==False:
+    if asymmetric == False:
         # Symmetric proximity matrix
         phi = np.minimum(phi, phi.T)
-    elif asymmetric==True:
+    elif asymmetric == True:
         # Asymmetric proximity matrix
         phi = phi.T
 
-    return(phi)
+    return phi
+
 
 def calc_continuous_proximity(rca, ubiquity):
     """Calculate product proximity matrices - continuous
@@ -38,5 +40,5 @@ def calc_continuous_proximity(rca, ubiquity):
         pandas df with proximity values for every product pair
     """
     # Calculate continuous proximity
-    phi = (1 + np.corrcoef(rca.T))/2
-    return(phi)
+    phi = (1 + np.corrcoef(rca.T)) / 2
+    return phi

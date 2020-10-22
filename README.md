@@ -5,16 +5,17 @@ This package is part of Harvard Growth Lab’s portfolio of software packages, d
 # About
 Python package to calculate economic complexity indices.
 
-STATA implementation of the economic complexity index available at: https://github.com/cid-harvard/ecomplexity
+STATA implementation of the economic complexity index available at: <https://github.com/cid-harvard/ecomplexity>
 
-Explore complexity and associated data using Harvard CID's Atlas tool: http://atlas.cid.harvard.edu
+Explore complexity and associated data using Harvard CID's Atlas tool: <http://atlas.cid.harvard.edu>
 
-### Tutorial
+## Tutorial
 
 **Installation**:
 At terminal: `pip install ecomplexity`
 
 **Usage**:
+
 ```python
 from ecomplexity import ecomplexity
 from ecomplexity import proximity
@@ -31,8 +32,10 @@ cdata = ecomplexity(data, trade_cols)
 # Calculate proximity matrix
 prox_df = proximity(data, trade_cols)
 ```
+
 **Arguments**:
-```
+
+```text
 data: pandas dataframe containing production / trade data.
     Including variables indicating time, location, product and value
 cols_input: dict of column names for time, location, product and value.
@@ -57,11 +60,12 @@ asymmetric: Used to calculate product proximities, indicates whether
     *default* False.
 ```
 
-### TODO:
+### TODO
 
 - There are very minor differences in the values of density, COI and COG between STATA and Python due to the way matrix computations are handled by the two. These should be aligned in the future.
 - knn options for density: in the future, allow knn parameter for density calculation
 
-### References:
-- Hausmann, R., Hidalgo, C. A., Bustos, S., Coscia, M., Simoes, A., & Yıldırım, M. (2013). The Atlas of Economic Complexity: Mapping Paths to Prosperity (Part 1). Retrieved from https://growthlab.cid.harvard.edu/files/growthlab/files/atlas_2013_part1.pdf
-- Hidalgo, C. A., Klinger, B., Barabasi, A.-L., & Hausmann, R. (2007). The Product Space Conditions the Development of Nations. Science, 317(5837), 482–487. http://doi.org/10.1126/science.1144581
+### References
+
+- Hausmann, R., Hidalgo, C. A., Bustos, S., Coscia, M., Simoes, A., & Yıldırım, M. (2013). The Atlas of Economic Complexity: Mapping Paths to Prosperity (Part 1). Retrieved from <https://growthlab.cid.harvard.edu/files/growthlab/files/atlas_2013_part1.pdf>
+- Hidalgo, C. A., Klinger, B., Barabasi, A.-L., & Hausmann, R. (2007). The Product Space Conditions the Development of Nations. Science, 317(5837), 482–487. <http://doi.org/10.1126/science.1144581>

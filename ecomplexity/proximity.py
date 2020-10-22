@@ -15,7 +15,8 @@ def proximity(data, cols_input, presence_test="rca", val_errors_flag='coerce',
             Example: {'time':'year', 'loc':'origin', 'prod':'hs92', 'val':'export_val'}
         presence_test: str for test used for presence of industry in location.
             One of "rca" (default), "rpop", "both", or "manual".
-            Determines which values are used for M_cp calculations.
+            Determines which values are
+ used for M_cp calculations.
             If "manual", M_cp is taken as given from the "value" column in data
         val_errors_flag: {'coerce','ignore','raise'}. Passed to pd.to_numeric
             *default* coerce.
@@ -83,8 +84,8 @@ def proximity(data, cols_input, presence_test="rca", val_errors_flag='coerce',
     output = output[output.prod1!=output.prod2]
 
     # Rename based on original product column name
-    output = output.rename(columns={'prod1':cols_input['prod']+'_1',
-                                    'prod2':cols_input['prod']+'_2',
-                                    'time':cols_input['time']})
+    output = output.rename(columns={'prod1':cdata.cols_input['prod']+'_1',
+                                    'prod2':cdata.cols_input['prod']+'_2',
+                                    'time':cdata.cols_input['time']})
 
     return(output)
