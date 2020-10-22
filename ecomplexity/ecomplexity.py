@@ -6,54 +6,58 @@ from ecomplexity.ComplexityData import ComplexityData
 from ecomplexity.density import calc_density
 from ecomplexity.coicog import calc_coi_cog
 
+
 def reshape_output_to_data(cdata, t):
     """Reshape output ndarrays to df"""
-    diversity = cdata.diversity_t[:, np.newaxis].repeat(
-        cdata.mcp_t.shape[1], axis=1).ravel()
-    ubiquity = cdata.ubiquity_t[np.newaxis, :].repeat(
-        cdata.mcp_t.shape[0], axis=0).ravel()
-    eci = cdata.eci_t[:, np.newaxis].repeat(
-        cdata.mcp_t.shape[1], axis=1).ravel()
-    pci = cdata.pci_t[np.newaxis, :].repeat(
-        cdata.mcp_t.shape[0], axis=0).ravel()
-    coi = cdata.coi_t[:, np.newaxis].repeat(
-        cdata.mcp_t.shape[1], axis=1).ravel()
+    diversity = (
+        cdata.diversity_t[:, np.newaxis].repeat(cdata.mcp_t.shape[1], axis=1).ravel()
+    )
+    ubiquity = (
+        cdata.ubiquity_t[np.newaxis, :].repeat(cdata.mcp_t.shape[0], axis=0).ravel()
+    )
+    eci = cdata.eci_t[:, np.newaxis].repeat(cdata.mcp_t.shape[1], axis=1).ravel()
+    pci = cdata.pci_t[np.newaxis, :].repeat(cdata.mcp_t.shape[0], axis=0).ravel()
+    coi = cdata.coi_t[:, np.newaxis].repeat(cdata.mcp_t.shape[1], axis=1).ravel()
 
-    out_dict = {'diversity': diversity,
-                'ubiquity': ubiquity,
-                'mcp': cdata.mcp_t.ravel(),
-                'eci': eci,
-                'pci': pci,
-                'density': cdata.density_t.ravel(),
-                'coi': coi,
-                'cog': cdata.cog_t.ravel()}
+    out_dict = {
+        "diversity": diversity,
+        "ubiquity": ubiquity,
+        "mcp": cdata.mcp_t.ravel(),
+        "eci": eci,
+        "pci": pci,
+        "density": cdata.density_t.ravel(),
+        "coi": coi,
+        "cog": cdata.cog_t.ravel(),
+    }
 
-    if hasattr(cdata, 'rpop_t'):
-        out_dict['rca'] = cdata.rca_t.ravel()
-        out_dict['rpop'] = cdata.rpop_t.ravel()
+    if hasattr(cdata, "rpop_t"):
+        out_dict["rca"] = cdata.rca_t.ravel()
+        out_dict["rpop"] = cdata.rpop_t.ravel()
 
-    elif hasattr(cdata, 'rca_t'):
-        out_dict['rca'] = cdata.rca_t.ravel()
+    elif hasattr(cdata, "rca_t"):
+        out_dict["rca"] = cdata.rca_t.ravel()
 
     output = pd.DataFrame.from_dict(out_dict).reset_index(drop=True)
 
-    cdata.data_t['time'] = t
+    cdata.data_t["time"] = t
     cdata.output_t = pd.concat([cdata.data_t.reset_index(), output], axis=1)
     cdata.output_list.append(cdata.output_t)
-    return(cdata)
+    return cdata
 
 
-def conform_to_original_data(cdata, cols_input, data):
+def conform_to_original_data(cdata, data):
     """Reset column names and add dropped columns back"""
-    cdata.output = cdata.output.rename(columns=cols_input)
+    cdata.output = cdata.output.rename(columns=cdata.cols_input)
     cdata.output = cdata.output.merge(
-        data, how="outer", on=list(cols_input.values()))
-    return(cdata)
+        data, how="outer", on=list(cdata.cols_input.values())
+    )
+    return cdata
+
 
 def calc_eci_pci(cdata):
     # Calculate ECI and PCI eigenvectors
-    mcp1 = (cdata.mcp_t / cdata.diversity_t[:, np.newaxis])
-    mcp2 = (cdata.mcp_t / cdata.ubiquity_t[np.newaxis, :])
+    mcp1 = cdata.mcp_t / cdata.diversity_t[:, np.newaxis]
+    mcp2 = cdata.mcp_t / cdata.ubiquity_t[np.newaxis, :]
     # These matrix multiplication lines are very slow
     Mcc = mcp1 @ mcp2.T
     Mpp = mcp2.T @ mcp1
@@ -71,12 +75,20 @@ def calc_eci_pci(cdata):
     eci_t = s1 * kc
     pci_t = s1 * kp
 
-    return(eci_t, pci_t)
+    return (eci_t, pci_t)
 
 
-def ecomplexity(data, cols_input, presence_test="rca", val_errors_flag='coerce',
-                rca_mcp_threshold=1, rpop_mcp_threshold=1, pop=None,
-                continuous=False, asymmetric=False):
+def ecomplexity(
+    data,
+    cols_input,
+    presence_test="rca",
+    val_errors_flag="coerce",
+    rca_mcp_threshold=1,
+    rpop_mcp_threshold=1,
+    pop=None,
+    continuous=False,
+    asymmetric=False,
+):
     """Complexity calculations through the ComplexityData class
 
     Args:
@@ -130,8 +142,9 @@ def ecomplexity(data, cols_input, presence_test="rca", val_errors_flag='coerce',
         # Check if Mcp is pre-computed
         if presence_test != "manual":
             cdata.calculate_rca()
-            cdata.calculate_mcp(rca_mcp_threshold, rpop_mcp_threshold,
-                                presence_test, pop, t)
+            cdata.calculate_mcp(
+                rca_mcp_threshold, rpop_mcp_threshold, presence_test, pop, t
+            )
         else:
             cdata.calculate_manual_mcp()
 
@@ -144,8 +157,9 @@ def ecomplexity(data, cols_input, presence_test="rca", val_errors_flag='coerce',
 
         # Calculate proximity and density
         if continuous == False:
-            prox_mat = calc_discrete_proximity(cdata.mcp_t, cdata.ubiquity_t,
-                                               asymmetric)
+            prox_mat = calc_discrete_proximity(
+                cdata.mcp_t, cdata.ubiquity_t, asymmetric
+            )
             cdata.density_t = calc_density(cdata.mcp_t, prox_mat)
         elif continuous == True and presence_test == "rpop":
             prox_mat = calc_continuous_proximity(cdata.rpop_t, cdata.ubiquity_t)
@@ -161,13 +175,13 @@ def ecomplexity(data, cols_input, presence_test="rca", val_errors_flag='coerce',
         cdata.pci_t = (cdata.pci_t - cdata.eci_t.mean()) / cdata.eci_t.std()
         cdata.cog_t = cdata.cog_t / cdata.eci_t.std()
         cdata.eci_t = (cdata.eci_t - cdata.eci_t.mean()) / cdata.eci_t.std()
-        
+
         cdata.coi_t = (cdata.coi_t - cdata.coi_t.mean()) / cdata.coi_t.std()
 
         # Reshape ndarrays to df
         cdata = reshape_output_to_data(cdata, t)
 
     cdata.output = pd.concat(cdata.output_list)
-    cdata = conform_to_original_data(cdata, cols_input, data)
+    cdata = conform_to_original_data(cdata, data)
 
-    return(cdata.output)
+    return cdata.output

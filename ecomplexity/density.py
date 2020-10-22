@@ -4,6 +4,7 @@
 import pandas as pd
 import numpy as np
 
+
 def calc_density(rca_or_mcp, proximity_mat):
     """Calculate density, as defined by Hidalgo et. al. (2007)
 
@@ -19,4 +20,4 @@ def calc_density(rca_or_mcp, proximity_mat):
     den = np.nansum(proximity_mat, axis=1)[np.newaxis, :]
     # density = rca_or_mcp @ (proximity_mat / den)
     density = rca_or_mcp @ (proximity_mat.T / den)
-    return(density)
+    return density
