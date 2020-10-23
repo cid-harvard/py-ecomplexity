@@ -8,7 +8,7 @@ def readme():
 
 setup(
     name="ecomplexity",
-    version="0.5.1",
+    version="0.5.2",
     description="Package to calculate economic complexity and associated variables",
     long_description=readme(),
     long_description_content_type="text/markdown",
