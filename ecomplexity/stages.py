@@ -97,9 +97,11 @@ def Mcp_post_agg(Mcp_dict: dict, post_agg_t_fraction: float) -> pd.DataFrame:
     # add up all elements in dict
     Mcp_sum = 0
     for Mcp in Mcp_dict.values():
-        Mcp_sum += Mcp
+        Mcp_sum = Mcp_sum + Mcp # TODO: check how += and = ... + ... differ
 
     # apply thresholding
+    Mcp_sum = Mcp_sum.fillna(0)
+    
     return Mcp_sum.applymap(lambda x: 1 if x/len(Mcp_dict) > post_agg_t_fraction else 0)
 
 
@@ -247,3 +249,68 @@ def Gpp_gen(Ppa: pd.DataFrame) -> pd.DataFrame:
     denominator = Ppa.mean(axis=1).T
 
     return numerator / denominator
+
+def k0_helper(data_mat, threshold=0):
+    Ppa_filtered = data_mat.applymap(lambda x: 1 if x > threshold else 0)
+    return (Ppa_filtered.sum(axis=0).to_frame().rename(columns={0: 'sm'}), 
+            data_mat.sum(axis=1).to_frame().rename(columns={0: 'sm'}))
+
+def k0_gen(Ppa, Cca, Mcp, Ppa_threshold=0, Cca_threshold=0, Mcp_threshold=0):
+    capability_generality, industry_span = k0_helper(data_mat=Ppa, threshold=Ppa_threshold)
+    capability_ubiquity, country_completeness = k0_helper(data_mat=Cca, threshold=Cca_threshold)
+    industry_ubiquity, country_diversity = k0_helper(data_mat=Mcp, threshold=Mcp_threshold)
+    return (capability_generality, 
+            capability_ubiquity,
+            industry_span, 
+            industry_ubiquity,
+            country_completeness, 
+            country_diversity)
+
+def k1_helper(melted_mat, join_mat, join_on, group_on):
+    return (melted_mat 
+            >> inner_join(_, join_mat, on = join_on)
+            >> group_by(group_on)
+            >> fast_summarize(avg_metric = _.sm.mean())
+        )   
+
+def k1_gen(Ppa, Cca, Mcp, Ppa_threshold=0, Cca_threshold=0, Mcp_threshold=0):
+    (capability_generality, 
+        capability_ubiquity,
+        industry_span, 
+        industry_ubiquity,
+        country_completeness, 
+        country_diversity) = k0_gen(Ppa, Cca, Mcp, Ppa_threshold, Cca_threshold, Mcp_threshold)
+    
+    Mcp_melted = Mcp.reset_index().melt(id_vars='c', var_name='naics', value_name = 'x') >> filter(_.x != 0) 
+    Cca_melted = Cca.reset_index().melt(id_vars='c', var_name='capability', value_name = 'x') >> filter(_.x != 0) 
+    Ppa_melted = Ppa.reset_index().melt(id_vars='naics', var_name='capability', value_name = 'x') >> filter(_.x >= Ppa_threshold) 
+
+    avg_diversity_c_ind = k1_helper(melted_mat = Mcp_melted, join_mat=country_diversity, join_on="c", group_on="naics")
+    avg_ubiquity_ind_c = k1_helper(melted_mat = Mcp_melted, join_mat=industry_ubiquity, join_on="naics", group_on="c")
+    avg_ubiquity_cap_c = k1_helper(melted_mat = Cca_melted, join_mat=capability_ubiquity, join_on="capability", group_on="c")
+    avg_completeness_c_cap = k1_helper(melted_mat = Cca_melted, join_mat=country_completeness, join_on="c", group_on="capability")
+
+    avg_generality_cap_ind = k1_helper(melted_mat = Ppa_melted, join_mat=capability_generality, join_on="capability", group_on="naics")
+    avg_ubiquity_cap_ind = k1_helper(melted_mat = Ppa_melted, join_mat=capability_ubiquity, join_on="capability", group_on="naics")
+    avg_completeness_c_ind = k1_helper(melted_mat = Mcp_melted, join_mat=country_completeness, join_on="c", group_on="naics")
+    
+    avg_span_ind_c = k1_helper(melted_mat = Mcp_melted, join_mat=industry_span, join_on="naics", group_on="c")
+    avg_generality_cap_c = k1_helper(melted_mat = Cca_melted, join_mat=capability_generality, join_on="capability", group_on="c")
+
+    avg_span_ind_cap = k1_helper(melted_mat = Ppa_melted, join_mat=industry_span, join_on="naics", group_on="capability")
+    avg_ubiquity_ind_cap = k1_helper(melted_mat = Ppa_melted, join_mat=industry_ubiquity, join_on="naics", group_on="capability")
+    avg_diversity_c_cap = k1_helper(melted_mat = Cca_melted, join_mat=country_diversity, join_on="c", group_on="capability")
+
+
+    return (avg_diversity_c_ind,
+    avg_ubiquity_ind_c,
+    avg_ubiquity_cap_c,
+    avg_completeness_c_cap,
+    avg_generality_cap_ind,
+    avg_ubiquity_cap_ind,
+    avg_completeness_c_ind,
+    avg_span_ind_c,
+    avg_generality_cap_c,
+    avg_span_ind_cap,
+    avg_ubiquity_ind_cap,
+    avg_diversity_c_cap)
