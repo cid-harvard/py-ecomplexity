@@ -4,7 +4,7 @@ import warnings
 from ecomplexity.calc_proximity import calc_discrete_proximity
 from ecomplexity.calc_proximity import calc_continuous_proximity
 from ecomplexity.ComplexityData import ComplexityData
-from ecomplexity.density import calc_density
+from ecomplexity.calc_density import calc_density
 from ecomplexity.coicog import calc_coi_cog
 
 
