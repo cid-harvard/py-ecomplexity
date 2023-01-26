@@ -16,6 +16,9 @@ Explore complexity and associated data using Harvard CID's Atlas tool: <http://a
 **Installation**:
 At terminal: `pip install ecomplexity`
 
+If you wish to install the latest version of the package under development, you can install directly from GitHub:
+`pip install git+https://github.com/cid-harvard/py-ecomplexity@develop`
+
 **Usage**:
 
 ```python
@@ -60,6 +63,9 @@ continuous: Used to calculate product proximities, indicates whether
 asymmetric: Used to calculate product proximities, indicates whether
     to generate asymmetric proximity matrix (True) or symmetric (False).
     *default* False.
+knn: Number of nearest neighbors from proximity matrix to use to calculate
+    density. Will use entire proximity matrix if None.
+    *default* None.
 ```
 
 ## FAQ
