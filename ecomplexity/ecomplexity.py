@@ -57,21 +57,14 @@ def conform_to_original_data(cdata, data):
 
 def calc_eci_pci(cdata):
     # Check if diversity or ubiquity is 0 or nan, can cause problems
-    cntry_mask = np.argwhere(
-        np.isnan(cdata.diversity_t) | (cdata.diversity_t == 0)
-    ).squeeze()
-    prod_mask = np.argwhere(
-        np.isnan(cdata.ubiquity_t) | (cdata.ubiquity_t == 0)
-    ).squeeze()
-
-    # Extract valid elements only
     if ((cdata.diversity_t == 0).sum() > 0) | ((cdata.ubiquity_t == 0).sum() > 0):
         warnings.warn(
             f"In year {cdata.t}, diversity / ubiquity is 0 for some locs/prods"
         )
 
-    cntry_mask = np.argwhere(cdata.diversity_t == 0)
-    prod_mask = np.argwhere(cdata.ubiquity_t == 0)
+    # Extract valid elements only
+    cntry_mask = np.argwhere(cdata.diversity_t == 0).squeeze()
+    prod_mask = np.argwhere(cdata.ubiquity_t == 0).squeeze()
     diversity_valid = cdata.diversity_t[cdata.diversity_t != 0]
     ubiquity_valid = cdata.ubiquity_t[cdata.ubiquity_t != 0]
     mcp_valid = cdata.mcp_t[cdata.diversity_t != 0, :][:, cdata.ubiquity_t != 0]
