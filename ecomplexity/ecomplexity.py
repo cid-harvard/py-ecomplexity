@@ -229,6 +229,8 @@ def ecomplexity(
         cdata.coi_t, cdata.cog_t = calc_coi_cog(cdata, prox_mat)
 
         # Normalize variables as per STATA package
+        # Normalization using ECI mean and std. dev. preserves the property that 
+        # ECI = (mean of PCI of products for which MCP=1)
         cdata.pci_t = (cdata.pci_t - cdata.eci_t.mean()) / cdata.eci_t.std()
         cdata.cog_t = cdata.cog_t / cdata.eci_t.std()
         cdata.eci_t = (cdata.eci_t - cdata.eci_t.mean()) / cdata.eci_t.std()

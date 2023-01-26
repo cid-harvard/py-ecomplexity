@@ -1,6 +1,8 @@
 # Economic Complexity and Product Complexity
-## by the Growth Lab at Harvard's Center for International Development
-This package is part of Harvard Growth Lab’s portfolio of software packages, digital products and interactive data visualizations. To browse our entire portfolio, please visit growthlab.app. To learn more about our research, please visit [Harvard Growth Lab’s home page](https://growthlab.cid.harvard.edu/).
+
+By the Growth Lab at Harvard's Center for International Development
+
+This package is part of Harvard Growth Lab’s portfolio of software packages, digital products and interactive data visualizations. To browse our entire portfolio, please visit [growthlab.app](growthlab.app). To learn more about our research, please visit [Harvard Growth Lab’s home page](https://growthlab.cid.harvard.edu/).
 
 # About
 Python package to calculate economic complexity indices.
@@ -60,10 +62,11 @@ asymmetric: Used to calculate product proximities, indicates whether
     *default* False.
 ```
 
-### TODO
+## FAQ
 
-- There are very minor differences in the values of density, COI and COG between STATA and Python due to the way matrix computations are handled by the two. These should be aligned in the future.
-- knn options for density: in the future, allow knn parameter for density calculation
+- Why are ECI and PCI are both normalized using ECI's mean and std. dev?
+    + This normalization preserves the property that ECI = (mean of PCI of products for which MCP=1)
+
 
 ### References
 
