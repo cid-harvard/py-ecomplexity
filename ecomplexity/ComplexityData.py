@@ -57,25 +57,30 @@ class ComplexityData(object):
     def create_full_df(self, t):
         """Rectangularize, but remove rows with diversity or ubiquity zero
 
-        Rows with zero diversity / ubiquity lead to dividebyzero errors and
-        incorrect values during normzalization
+        Rows with zero diversity / ubiquity lead to ZeroDivision errors and
+        incorrect values during normalization
         """
         self.t = t
         self.data_t = self.data.loc[t].copy()
-        diversity_check = (
+        # Check for zero diversity and ubiquity
+        val_diversity_check = (
             self.data_t.reset_index().groupby(["loc"])["val"].sum().reset_index()
         )
-        ubiquity_check = (
+        val_ubiquity_check = (
             self.data_t.reset_index().groupby(["prod"])["val"].sum().reset_index()
         )
-        diversity_check = diversity_check[diversity_check.val != 0]
-        ubiquity_check = ubiquity_check[ubiquity_check.val != 0]
+        val_diversity_check = val_diversity_check[val_diversity_check.val != 0]
+        val_ubiquity_check = val_ubiquity_check[val_ubiquity_check.val != 0]
+        # Remove locations and products with zero diversity and ubiquity respectively
         self.data_t = self.data_t.reset_index()
-        self.data_t = self.data_t.merge(diversity_check[["loc"]], on="loc", how="right")
         self.data_t = self.data_t.merge(
-            ubiquity_check[["prod"]], on="prod", how="right"
+            val_diversity_check[["loc"]], on="loc", how="right"
+        )
+        self.data_t = self.data_t.merge(
+            val_ubiquity_check[["prod"]], on="prod", how="right"
         )
         self.data_t.set_index(["loc", "prod"], inplace=True)
+        # Create full dataframe with all combinations of locations and products
         data_index = pd.MultiIndex.from_product(
             self.data_t.index.levels, names=self.data_t.index.names
         )

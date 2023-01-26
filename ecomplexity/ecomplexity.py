@@ -146,7 +146,7 @@ def ecomplexity(
         rpop_mcp_threshold: numeric indicating RPOP threshold beyond which mcp is 1.
             *default* 1. Only used if presence_test is not "rca".
         pop: pandas df, with time, location and corresponding population, in that order.
-            Not required if presence_test is "rca" (default).
+            Not required if presence_test is "rca", which is the default.
         continuous: Used to calculate product proximities, indicates whether
             to consider correlation of every product pair (True) or product
             co-occurrence (False). *default* False.
@@ -192,6 +192,12 @@ def ecomplexity(
         # Calculate diversity and ubiquity
         cdata.diversity_t = np.nansum(cdata.mcp_t, axis=1)
         cdata.ubiquity_t = np.nansum(cdata.mcp_t, axis=0)
+
+        # If ANY of diversity or ubiquity is 0, warn that eci and pci will be nan
+        if np.any(cdata.diversity_t == 0) or np.any(cdata.ubiquity_t == 0):
+            warnings.warn(
+                f"Year {t}: Diversity or ubiquity is 0, so ECI and PCI will be nan"
+            )
 
         # Calculate ECI and PCI
         cdata.eci_t, cdata.pci_t = calc_eci_pci(cdata)
