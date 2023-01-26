@@ -1,6 +1,8 @@
 # Economic Complexity and Product Complexity
-## by the Growth Lab at Harvard's Center for International Development
-This package is part of Harvard Growth Lab’s portfolio of software packages, digital products and interactive data visualizations. To browse our entire portfolio, please visit growthlab.app. To learn more about our research, please visit [Harvard Growth Lab’s home page](https://growthlab.cid.harvard.edu/).
+
+By the Growth Lab at Harvard's Center for International Development
+
+This package is part of Harvard Growth Lab’s portfolio of software packages, digital products and interactive data visualizations. To browse our entire portfolio, please visit [growthlab.app](growthlab.app). To learn more about our research, please visit [Harvard Growth Lab’s home page](https://growthlab.cid.harvard.edu/).
 
 # About
 Python package to calculate economic complexity indices.
@@ -13,6 +15,9 @@ Explore complexity and associated data using Harvard CID's Atlas tool: <http://a
 
 **Installation**:
 At terminal: `pip install ecomplexity`
+
+If you wish to install the latest version of the package under development, you can install directly from GitHub:
+`pip install git+https://github.com/cid-harvard/py-ecomplexity@develop`
 
 **Usage**:
 
@@ -58,12 +63,16 @@ continuous: Used to calculate product proximities, indicates whether
 asymmetric: Used to calculate product proximities, indicates whether
     to generate asymmetric proximity matrix (True) or symmetric (False).
     *default* False.
+knn: Number of nearest neighbors from proximity matrix to use to calculate
+    density. Will use entire proximity matrix if None.
+    *default* None.
 ```
 
-### TODO
+## FAQ
 
-- There are very minor differences in the values of density, COI and COG between STATA and Python due to the way matrix computations are handled by the two. These should be aligned in the future.
-- knn options for density: in the future, allow knn parameter for density calculation
+- Why are ECI and PCI are both normalized using ECI's mean and std. dev?
+    + This normalization preserves the property that ECI = (mean of PCI of products for which MCP=1)
+
 
 ### References
 

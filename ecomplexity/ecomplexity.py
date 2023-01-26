@@ -4,7 +4,7 @@ import warnings
 from ecomplexity.calc_proximity import calc_discrete_proximity
 from ecomplexity.calc_proximity import calc_continuous_proximity
 from ecomplexity.ComplexityData import ComplexityData
-from ecomplexity.density import calc_density
+from ecomplexity.calc_density import calc_density
 from ecomplexity.coicog import calc_coi_cog
 
 
@@ -119,6 +119,7 @@ def ecomplexity(
     pop=None,
     continuous=False,
     asymmetric=False,
+    knn=None,
     verbose=True,
 ):
     """Complexity calculations through the ComplexityData class
@@ -139,13 +140,16 @@ def ecomplexity(
         rpop_mcp_threshold: numeric indicating RPOP threshold beyond which mcp is 1.
             *default* 1. Only used if presence_test is not "rca".
         pop: pandas df, with time, location and corresponding population, in that order.
-            Not required if presence_test is "rca" (default).
+            Not required if presence_test is "rca", which is the default.
         continuous: Used to calculate product proximities, indicates whether
             to consider correlation of every product pair (True) or product
             co-occurrence (False). *default* False.
         asymmetric: Used to calculate product proximities, indicates whether
             to generate asymmetric proximity matrix (True) or symmetric (False).
             *default* False.
+        knn: Number of nearest neighbors from proximity matrix to use to calculate
+            density. Will use entire proximity matrix if None.
+            *default* None.
         verbose: Print year being processed
 
     Returns:
@@ -186,6 +190,12 @@ def ecomplexity(
         cdata.diversity_t = np.nansum(cdata.mcp_t, axis=1)
         cdata.ubiquity_t = np.nansum(cdata.mcp_t, axis=0)
 
+        # If ANY of diversity or ubiquity is 0, warn that eci and pci will be nan
+        if np.any(cdata.diversity_t == 0) or np.any(cdata.ubiquity_t == 0):
+            warnings.warn(
+                f"Year {t}: Diversity or ubiquity is 0, so ECI and PCI will be nan"
+            )
+
         # Calculate ECI and PCI
         cdata.eci_t, cdata.pci_t = calc_eci_pci(cdata)
 
@@ -194,18 +204,26 @@ def ecomplexity(
             prox_mat = calc_discrete_proximity(
                 cdata.mcp_t, cdata.ubiquity_t, asymmetric
             )
-            cdata.density_t = calc_density(cdata.mcp_t, prox_mat)
+            cdata.density_t = calc_density(
+                rca_or_mcp=cdata.mcp_t, proximity_mat=prox_mat, knn=knn
+            )
         elif continuous == True and presence_test == "rpop":
             prox_mat = calc_continuous_proximity(cdata.rpop_t, cdata.ubiquity_t)
-            cdata.density_t = calc_density(cdata.rpop_t, prox_mat)
+            cdata.density_t = calc_density(
+                rca_or_mcp=cdata.rpop_t, proximity_mat=prox_mat, knn=knn
+            )
         elif continuous == True and presence_test != "rpop":
             prox_mat = calc_continuous_proximity(cdata.rca_t, cdata.ubiquity_t)
-            cdata.density_t = calc_density(cdata.rca_t, prox_mat)
+            cdata.density_t = calc_density(
+                rca_or_mcp=cdata.rca_t, proximity_mat=prox_mat, knn=knn
+            )
 
         # Calculate COI and COG
         cdata.coi_t, cdata.cog_t = calc_coi_cog(cdata, prox_mat)
 
         # Normalize variables as per STATA package
+        # Normalization using ECI mean and std. dev. preserves the property that 
+        # ECI = (mean of PCI of products for which MCP=1)
         cdata.pci_t = (cdata.pci_t - cdata.eci_t.mean()) / cdata.eci_t.std()
         cdata.cog_t = cdata.cog_t / cdata.eci_t.std()
         cdata.eci_t = (cdata.eci_t - cdata.eci_t.mean()) / cdata.eci_t.std()
