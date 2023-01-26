@@ -126,6 +126,7 @@ def ecomplexity(
     pop=None,
     continuous=False,
     asymmetric=False,
+    knn=None,
     verbose=True,
 ):
     """Complexity calculations through the ComplexityData class
@@ -153,6 +154,9 @@ def ecomplexity(
         asymmetric: Used to calculate product proximities, indicates whether
             to generate asymmetric proximity matrix (True) or symmetric (False).
             *default* False.
+        knn: Number of nearest neighbors from proximity matrix to use to calculate
+            density. Will use entire proximity matrix if None.
+            *default* None.
         verbose: Print year being processed
 
     Returns:
@@ -207,13 +211,19 @@ def ecomplexity(
             prox_mat = calc_discrete_proximity(
                 cdata.mcp_t, cdata.ubiquity_t, asymmetric
             )
-            cdata.density_t = calc_density(cdata.mcp_t, prox_mat)
+            cdata.density_t = calc_density(
+                rca_or_mcp=cdata.mcp_t, proximity_mat=prox_mat, knn=knn
+            )
         elif continuous == True and presence_test == "rpop":
             prox_mat = calc_continuous_proximity(cdata.rpop_t, cdata.ubiquity_t)
-            cdata.density_t = calc_density(cdata.rpop_t, prox_mat)
+            cdata.density_t = calc_density(
+                rca_or_mcp=cdata.rpop_t, proximity_mat=prox_mat, knn=knn
+            )
         elif continuous == True and presence_test != "rpop":
             prox_mat = calc_continuous_proximity(cdata.rca_t, cdata.ubiquity_t)
-            cdata.density_t = calc_density(cdata.rca_t, prox_mat)
+            cdata.density_t = calc_density(
+                rca_or_mcp=cdata.rca_t, proximity_mat=prox_mat, knn=knn
+            )
 
         # Calculate COI and COG
         cdata.coi_t, cdata.cog_t = calc_coi_cog(cdata, prox_mat)
