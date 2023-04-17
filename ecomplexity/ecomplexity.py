@@ -118,6 +118,7 @@ def ecomplexity(
     rpop_mcp_threshold=1,
     pop=None,
     continuous=False,
+    proximity_edgelist=None,
     asymmetric=False,
     knn=None,
     verbose=True,
@@ -130,7 +131,7 @@ def ecomplexity(
         cols_input: dict of column names for time, location, product and value.
             Example: {'time':'year', 'loc':'origin', 'prod':'hs92', 'val':'export_val'}
         presence_test: str for test used for presence of industry in location.
-            One of "rca" (default), "rpop", "both", or "manual".
+            One of "rca" (default), "rpop", or "manual".
             Determines which values are used for M_cp calculations.
             If "manual", M_cp is taken as given from the "value" column in data
         val_errors_flag: {'coerce','ignore','raise'}. Passed to pd.to_numeric
@@ -147,6 +148,8 @@ def ecomplexity(
         asymmetric: Used to calculate product proximities, indicates whether
             to generate asymmetric proximity matrix (True) or symmetric (False).
             *default* False.
+        proximity_edgelist: pandas df with cols 'prod1', 'prod2', 'proximity'.
+            If None (default), proximity values are calculated from data.
         knn: Number of nearest neighbors from proximity matrix to use to calculate
             density. Will use entire proximity matrix if None.
             *default* None.
@@ -199,21 +202,67 @@ def ecomplexity(
         # Calculate ECI and PCI
         cdata.eci_t, cdata.pci_t = calc_eci_pci(cdata)
 
-        # Calculate proximity and density
-        if continuous == False:
-            prox_mat = calc_discrete_proximity(
-                cdata.mcp_t, cdata.ubiquity_t, asymmetric
+        # Check if proximities are pre-computed, otherwise compute from data
+        if proximity_edgelist is not None:
+            # Take proximity edgelist and convert to matrix
+            prox_mat = proximity_edgelist.pivot(
+                index="prod1", columns="prod2", values="proximity"
             )
+            # Make sure that the set of products in prod1 and prod2 are the same
+            # and make sure it is a square matrix
+            assert set(list(proximity_edgelist["prod1"].unique())) == set(
+                list(proximity_edgelist["prod2"].unique())
+            ), "The set of products in prod1 and prod2 are not the same"
+            assert prox_mat.shape[0] == prox_mat.shape[1], "prox_mat is not square"
+
+            # Reindex
+            prox_mat = prox_mat.reindex(cdata.data_t.index.levels[1])
+            prox_mat = prox_mat.reindex(cdata.data_t.index.levels[1], axis=1)
+            # Get values
+            prox_mat = prox_mat.values
+            # Check if any values are nan. If any nan's are present, warn
+            if np.any(np.isnan(prox_mat)):
+                # Get fraction of values that are nan that are not diagonal elements
+                prox_mat_nan_check = prox_mat.copy()
+                np.fill_diagonal(prox_mat_nan_check, 0)
+                nan_frac = (
+                    np.sum(np.isnan(prox_mat_nan_check)) / prox_mat_nan_check.size
+                )
+                if nan_frac > 0:
+                    warnings.warn(
+                        f"Year {t}: Proximity matrix contains {nan_frac*100:.2}% non-diagonal values that are NaN's, so some density values will be NaN.\nAssuming diagonals are 0 and that other nan's are infinity."
+                    )
+                else:
+                    warnings.warn(
+                        f"Year {t}: Proximity matrix contains diagonal values that are NaN's. Assuming all diagonal values to be zero."
+                    )
+                # Replace diagonals with zero
+                np.fill_diagonal(prox_mat, 0)
+                # # Replace other nan's with infinity
+                # prox_mat[np.isnan(prox_mat)] = np.inf
+
+        else:
+            # Calculate proximity
+            if continuous == False:
+                prox_mat = calc_discrete_proximity(
+                    cdata.mcp_t, cdata.ubiquity_t, asymmetric
+                )
+            elif continuous == True and presence_test == "rpop":
+                prox_mat = calc_continuous_proximity(cdata.rpop_t, cdata.ubiquity_t)
+            elif continuous == True and presence_test != "rpop":
+                prox_mat = calc_continuous_proximity(cdata.rca_t, cdata.ubiquity_t)
+
+        # Calculate density
+        # If there are any nulls in the proximity matrix, drop
+        if continuous == False or presence_test == "manual":
             cdata.density_t = calc_density(
                 rca_or_mcp=cdata.mcp_t, proximity_mat=prox_mat, knn=knn
             )
         elif continuous == True and presence_test == "rpop":
-            prox_mat = calc_continuous_proximity(cdata.rpop_t, cdata.ubiquity_t)
             cdata.density_t = calc_density(
                 rca_or_mcp=cdata.rpop_t, proximity_mat=prox_mat, knn=knn
             )
-        elif continuous == True and presence_test != "rpop":
-            prox_mat = calc_continuous_proximity(cdata.rca_t, cdata.ubiquity_t)
+        elif continuous == True and presence_test == "rca":
             cdata.density_t = calc_density(
                 rca_or_mcp=cdata.rca_t, proximity_mat=prox_mat, knn=knn
             )
@@ -222,7 +271,7 @@ def ecomplexity(
         cdata.coi_t, cdata.cog_t = calc_coi_cog(cdata, prox_mat)
 
         # Normalize variables as per STATA package
-        # Normalization using ECI mean and std. dev. preserves the property that 
+        # Normalization using ECI mean and std. dev. preserves the property that
         # ECI = (mean of PCI of products for which MCP=1)
         cdata.pci_t = (cdata.pci_t - cdata.eci_t.mean()) / cdata.eci_t.std()
         cdata.cog_t = cdata.cog_t / cdata.eci_t.std()

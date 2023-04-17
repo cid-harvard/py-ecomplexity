@@ -153,16 +153,7 @@ class ComplexityData(object):
             ) + convert_to_binary(self.rpop_t, rpop_mcp_threshold_input)
 
     def calculate_manual_mcp(self):
-        """If pre-computed MCP supplied, check validity and reshape"""
-        # Test to see if indeed MCP
-        if np.any(~np.isin(self.data_t.values, [0, 1])):
-            error_val = self.data_t.values[~np.isin(self.data_t.values, [0, 1])].flat[0]
-            raise ValueError(
-                "Manually supplied MCP column contains values other than 0 or 1 - Val: {}".format(
-                    error_val
-                )
-            )
-
+        """If pre-computed MCP supplied, reshape"""
         # Convert data into numpy array
         loc_n_vals = len(self.data_t.index.levels[0])
         prod_n_vals = len(self.data_t.index.levels[1])
