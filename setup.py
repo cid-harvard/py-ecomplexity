@@ -19,7 +19,7 @@ setup(name='ecomplexity',
       python_requires='>=3',
       install_requires=[
           'pandas >0.23.0',
-          'numpy >1.22.0'
+          'numpy >1.22.0',
           'scikit-learn >1.0.0'
       ],
       zip_safe=False,
