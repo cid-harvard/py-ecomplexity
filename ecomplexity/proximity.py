@@ -87,11 +87,13 @@ def proximity(
 
     output = pd.concat(output_list)
 
-    # Remove entries for product's proximity with itself
+    # Format
     output = output.reset_index()
     output.columns = ["prod1", "prod2", "proximity", "time"]
     output = output[["time", "prod1", "prod2", "proximity"]]
-    output = output[output.prod1 != output.prod2]
+    
+    # # Remove entries for product's proximity with itself
+    # output = output[output.prod1 != output.prod2]
 
     # Rename based on original product column name
     output = output.rename(
