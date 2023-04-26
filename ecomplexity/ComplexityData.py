@@ -158,5 +158,6 @@ class ComplexityData(object):
         loc_n_vals = len(self.data_t.index.levels[0])
         prod_n_vals = len(self.data_t.index.levels[1])
         data_np = self.data_t.values.reshape((loc_n_vals, prod_n_vals))
-
+        
+        self.rca_t = data_np
         self.mcp_t = data_np
