@@ -224,22 +224,22 @@ def ecomplexity(
             if np.any(np.isnan(prox_mat)):
                 # Get fraction of values that are nan that are not diagonal elements
                 prox_mat_nan_check = prox_mat.copy()
-                np.fill_diagonal(prox_mat_nan_check, 0)
+                np.fill_diagonal(prox_mat_nan_check, 1)
                 nan_frac = (
                     np.sum(np.isnan(prox_mat_nan_check)) / prox_mat_nan_check.size
                 )
                 if nan_frac > 0:
                     warnings.warn(
-                        f"Year {t}: Proximity matrix contains {nan_frac*100:.2}% non-diagonal values that are NaN's, so some density values will be NaN.\nAssuming diagonals are 0 and that other nan's are infinity."
+                        f"Year {t}: Proximity matrix contains {nan_frac*100:.2}% non-diagonal values that are NaN's, so some density values will be NaN.\nAssuming diagonals are 1 and that other nan's are zero."
                     )
                 else:
                     warnings.warn(
-                        f"Year {t}: Proximity matrix contains diagonal values that are NaN's. Assuming all diagonal values to be zero."
+                        f"Year {t}: Proximity matrix contains diagonal values that are NaN's. Assuming all diagonal values to be one."
                     )
-                # Replace diagonals with zero
-                np.fill_diagonal(prox_mat, 0)
-                # # Replace other nan's with infinity
-                # prox_mat[np.isnan(prox_mat)] = np.inf
+                # Replace diagonals with one
+                np.fill_diagonal(prox_mat, 1)
+                # Replace other nan's with zero
+                prox_mat[np.isnan(prox_mat)] = 0
 
         else:
             # Calculate proximity
