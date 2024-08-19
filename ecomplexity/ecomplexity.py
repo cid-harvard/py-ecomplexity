@@ -6,6 +6,7 @@ from ecomplexity.calc_proximity import calc_continuous_proximity
 from ecomplexity.ComplexityData import ComplexityData
 from ecomplexity.calc_density import calc_density
 from ecomplexity.coicog import calc_coi_cog
+from ecomplexity.log_supermodularity import get_frac_logsupermodular
 
 
 def reshape_output_to_data(cdata, t):
@@ -113,13 +114,17 @@ def ecomplexity(
     data,
     cols_input,
     presence_test="rca",
+    output_normalized_pci=True
     val_errors_flag="coerce",
     rca_mcp_threshold=1,
     rpop_mcp_threshold=1,
     pop=None,
     continuous=False,
+    proximity_edgelist=None,
     asymmetric=False,
     knn=None,
+    check_logsupermodularity=True,
+    report_logsupermodularity=False,
     verbose=True,
 ):
     """Complexity calculations through the ComplexityData class
@@ -130,9 +135,11 @@ def ecomplexity(
         cols_input: dict of column names for time, location, product and value.
             Example: {'time':'year', 'loc':'origin', 'prod':'hs92', 'val':'export_val'}
         presence_test: str for test used for presence of industry in location.
-            One of "rca" (default), "rpop", "both", or "manual".
+            One of "rca" (default), "rpop", or "manual".
             Determines which values are used for M_cp calculations.
             If "manual", M_cp is taken as given from the "value" column in data
+        output_normalized_pci: bool to indicate if pci or normalized pci val is returned.
+            Normalized pci value is the default
         val_errors_flag: {'coerce','ignore','raise'}. Passed to pd.to_numeric
             *default* coerce.
         rca_mcp_threshold: numeric indicating RCA threshold beyond which mcp is 1.
@@ -147,9 +154,17 @@ def ecomplexity(
         asymmetric: Used to calculate product proximities, indicates whether
             to generate asymmetric proximity matrix (True) or symmetric (False).
             *default* False.
+        proximity_edgelist: pandas df with cols 'prod1', 'prod2', 'proximity'.
+            If None (default), proximity values are calculated from data.
         knn: Number of nearest neighbors from proximity matrix to use to calculate
             density. Will use entire proximity matrix if None.
             *default* None.
+        check_logsupermodularity: If True (default), check log-supermodularity. If False, don't.
+            If int, use roughly that many samples to check log-supermodularity.
+            If "all", use all samples to check log-supermodularity.
+        report_logsupermodularity: If True, print percent of samples that conform to log-supermodularity.
+            If False (default), don't report.
+            Only used if check_logsupermodularity is True.
         verbose: Print year being processed
 
     Returns:
@@ -199,21 +214,115 @@ def ecomplexity(
         # Calculate ECI and PCI
         cdata.eci_t, cdata.pci_t = calc_eci_pci(cdata)
 
-        # Calculate proximity and density
-        if continuous == False:
-            prox_mat = calc_discrete_proximity(
-                cdata.mcp_t, cdata.ubiquity_t, asymmetric
+        # Check logsupermodularity
+        # If custom mcp matrix is given, then only run log-supermodularity check if mcp is continuous
+        if presence_test == "manual":
+            # Check if cdata.mcp_t is binary (only has 0 and 1 values)
+            if np.all(np.isin(np.unique(cdata.mcp_t), [0, 1])):
+                if check_logsupermodularity:
+                    warnings.warn(
+                        "Log-supermodularity check is not applicable for binary mcp matrix. Skipping..."
+                    )
+                check_logsupermodularity = False
+
+        if check_logsupermodularity:
+            if presence_test == "rpop":
+                matrix = cdata.rpop_t
+            elif presence_test == "rca":
+                matrix = cdata.rca_t
+            elif presence_test == "manual":
+                matrix = cdata.mcp_t
+
+            # Modify sampling_param for different behaviors
+            # Check if check_logsupermodularity is an int or bool
+            if isinstance(check_logsupermodularity, (int, float)) and not isinstance(
+                check_logsupermodularity, bool
+            ):
+                samples_to_use = int(check_logsupermodularity)
+            elif isinstance(check_logsupermodularity, bool):
+                samples_to_use = None
+            elif check_logsupermodularity == "all":
+                samples_to_use = "all"
+            else:
+                raise ValueError(
+                    "check_logsupermodularity must be an int, bool, or 'all' not "
+                    f"{type(check_logsupermodularity)}"
+                )
+
+            frac_log_supermodular = get_frac_logsupermodular(
+                matrix, cdata.eci_t, cdata.pci_t, samples_to_use=samples_to_use
             )
+            if report_logsupermodularity:
+                print(
+                    f"Percentage of pairs compared that meet log-supermodularity condition: {frac_log_supermodular:.2%}"
+                )
+
+            if frac_log_supermodular <= 0.3:
+                warnings.warn(
+                    f"Year {t}: Log-supermodularity condition is not fully satisfied ({frac_log_supermodular:.2%} of pairs compared satisfy this condition). The ECI and PCI values may not be a true representation of the complexity. More details at: https://growthlab.hks.harvard.edu/publications/structural-ranking-economic-complexity"
+                )
+
+        # Check if proximities are pre-computed, otherwise compute from data
+        if proximity_edgelist is not None:
+            # Take proximity edgelist and convert to matrix
+            prox_mat = proximity_edgelist.pivot(
+                index="prod1", columns="prod2", values="proximity"
+            )
+            # Make sure that the set of products in prod1 and prod2 are the same
+            # and make sure it is a square matrix
+            assert set(list(proximity_edgelist["prod1"].unique())) == set(
+                list(proximity_edgelist["prod2"].unique())
+            ), "The set of products in prod1 and prod2 are not the same"
+            assert prox_mat.shape[0] == prox_mat.shape[1], "prox_mat is not square"
+
+            # Reindex
+            prox_mat = prox_mat.reindex(cdata.data_t.index.levels[1])
+            prox_mat = prox_mat.reindex(cdata.data_t.index.levels[1], axis=1)
+            # Get values
+            prox_mat = prox_mat.values
+            # Check if any values are nan. If any nan's are present, warn
+            if np.any(np.isnan(prox_mat)):
+                # Get fraction of values that are nan that are not diagonal elements
+                prox_mat_nan_check = prox_mat.copy()
+                np.fill_diagonal(prox_mat_nan_check, 1)
+                nan_frac = (
+                    np.sum(np.isnan(prox_mat_nan_check)) / prox_mat_nan_check.size
+                )
+                if nan_frac > 0:
+                    warnings.warn(
+                        f"Year {t}: Proximity matrix contains {nan_frac*100:.2}% non-diagonal values that are NaN's, so some density values will be NaN.\nAssuming diagonals are 1 and that other nan's are zero."
+                    )
+                else:
+                    warnings.warn(
+                        f"Year {t}: Proximity matrix contains diagonal values that are NaN's. Assuming all diagonal values to be one."
+                    )
+                # Replace diagonals with one
+                np.fill_diagonal(prox_mat, 1)
+                # Replace other nan's with zero
+                prox_mat[np.isnan(prox_mat)] = 0
+
+        else:
+            # Calculate proximity
+            if not continuous:
+                prox_mat = calc_discrete_proximity(
+                    cdata.mcp_t, cdata.ubiquity_t, asymmetric
+                )
+            elif continuous and presence_test == "rpop":
+                prox_mat = calc_continuous_proximity(cdata.rpop_t, cdata.ubiquity_t)
+            elif continuous and presence_test != "rpop":
+                prox_mat = calc_continuous_proximity(cdata.rca_t, cdata.ubiquity_t)
+
+        # Calculate density
+        # If there are any nulls in the proximity matrix, drop
+        if not continuous or presence_test == "manual":
             cdata.density_t = calc_density(
                 rca_or_mcp=cdata.mcp_t, proximity_mat=prox_mat, knn=knn
             )
-        elif continuous == True and presence_test == "rpop":
-            prox_mat = calc_continuous_proximity(cdata.rpop_t, cdata.ubiquity_t)
+        elif continuous and presence_test == "rpop":
             cdata.density_t = calc_density(
                 rca_or_mcp=cdata.rpop_t, proximity_mat=prox_mat, knn=knn
             )
-        elif continuous == True and presence_test != "rpop":
-            prox_mat = calc_continuous_proximity(cdata.rca_t, cdata.ubiquity_t)
+        elif continuous and presence_test == "rca":
             cdata.density_t = calc_density(
                 rca_or_mcp=cdata.rca_t, proximity_mat=prox_mat, knn=knn
             )
@@ -222,12 +331,14 @@ def ecomplexity(
         cdata.coi_t, cdata.cog_t = calc_coi_cog(cdata, prox_mat)
 
         # Normalize variables as per STATA package
-        # Normalization using ECI mean and std. dev. preserves the property that 
+        # Normalization using ECI mean and std. dev. preserves the property that
         # ECI = (mean of PCI of products for which MCP=1)
-        cdata.pci_t = (cdata.pci_t - cdata.eci_t.mean()) / cdata.eci_t.std()
+        if output_normalized_pci:
+            cdata.pci_t = (cdata.pci_t - cdata.eci_t.mean()) / cdata.eci_t.std()
+            
         cdata.cog_t = cdata.cog_t / cdata.eci_t.std()
         cdata.eci_t = (cdata.eci_t - cdata.eci_t.mean()) / cdata.eci_t.std()
-
+        
         cdata.coi_t = (cdata.coi_t - cdata.coi_t.mean()) / cdata.coi_t.std()
 
         # Reshape ndarrays to df
