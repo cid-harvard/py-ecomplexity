@@ -113,8 +113,8 @@ def calc_eci_pci(cdata):
 def ecomplexity(
     data,
     cols_input,
+    output_normalized_pci=True,
     presence_test="rca",
-    output_normalized_pci=True
     val_errors_flag="coerce",
     rca_mcp_threshold=1,
     rpop_mcp_threshold=1,
