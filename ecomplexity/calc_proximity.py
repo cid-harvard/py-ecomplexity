@@ -18,6 +18,9 @@ def calc_discrete_proximity(mcp, ubiquity, asymmetric=False):
     # Calculate discrete proximity
     phi = mcp.T @ mcp
     phi = phi / ubiquity[np.newaxis, :]
+    
+    # Set diagonal to 0 explicitly 
+    np.fill_diagonal(phi, 0)
 
     if asymmetric == False:
         # Symmetric proximity matrix
@@ -41,4 +44,6 @@ def calc_continuous_proximity(rca, ubiquity):
     """
     # Calculate continuous proximity
     phi = (1 + np.corrcoef(rca.T)) / 2
+    # Set diagonal to 0 explicitly
+    np.fill_diagonal(phi, 0)
     return phi
