@@ -3,7 +3,6 @@
 
 import pandas as pd
 import numpy as np
-from sklearn.neighbors import NearestNeighbors
 
 
 def calc_density(rca_or_mcp, proximity_mat, knn=None):
@@ -24,6 +23,14 @@ def calc_density(rca_or_mcp, proximity_mat, knn=None):
         # density = rca_or_mcp @ (proximity_mat / den)
         density = rca_or_mcp @ (proximity_mat.T / den)
     else:
+        # Import sklearn only when knn is used (requires optional 'knn' extra)
+        try:
+            from sklearn.neighbors import NearestNeighbors
+        except ImportError:
+            raise ImportError(
+                "scikit-learn is required for knn density calculations. "
+                "Install it with: pip install ecomplexity[knn]"
+            )
         # Convert proximity matrix to a distance matrix
         distance_mat = 1 - proximity_mat
         # Get proximity to k nearest neighbors
