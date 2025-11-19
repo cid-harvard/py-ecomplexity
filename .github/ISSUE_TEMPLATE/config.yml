@@ -1,0 +1,11 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Documentation
+    url: https://github.com/cid-harvard/py-ecomplexity#readme
+    about: Check the README for usage examples and documentation
+  - name: Growth Lab Portfolio
+    url: https://growthlab.app
+    about: Explore other tools and data visualizations from Harvard Growth Lab
+  - name: Atlas of Economic Complexity
+    url: http://atlas.hks.harvard.edu
+    about: Explore complexity data using the Atlas tool
