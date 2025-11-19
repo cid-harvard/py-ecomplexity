@@ -25,6 +25,13 @@ requires-python = ">=3.8"
 
 [project.optional-dependencies]
 knn = ["scikit-learn >1.0.0"]
+dev = [
+    "pytest >=7.0.0",
+    "pytest-cov >=4.0.0",
+    "ruff >=0.1.0",
+    "mypy >=1.0.0",
+    "pre-commit >=3.0.0",
+]
 
 [project.urls]
 Homepage = "https://github.com/cid-harvard/py-ecomplexity"
@@ -47,4 +54,51 @@ exclude = [
 ]
 
 [tool.ruff]
-ignore = ["E501"]
+line-length = 88
+target-version = "py38"
+
+[tool.ruff.lint]
+select = [
+    "E",    # Critical errors
+    "F",    # Pyflakes
+    "B",    # Bug detection
+    "I",    # Import sorting
+    "N",    # Naming
+    "T20",  # Print statements
+    "UP",   # Python upgrades
+]
+ignore = ["E501", "F841"] # Ignore line length and unused variable errors
+
+[tool.ruff.lint.per-file-ignores]
+"**/test_*.py" = ["T201"]
+"**/tests/**/*.py" = ["T201"]
+
+# Configure specific documentation rules
+[tool.ruff.lint.pydocstyle]
+convention = "google"  # Use Google-style docstrings
+
+# Configure formatting rules
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "auto"
+skip-magic-trailing-comma = false
+
+# Configure import sorting rules
+[tool.ruff.lint.isort]
+known-first-party = ["ecomplexity"]
+force-single-line = false
+section-order = ["future", "standard-library", "third-party", "first-party", "local-folder"]
+
+[tool.mypy]
+python_version = "3.8"
+ignore_missing_imports = true
+show_error_codes = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "integration: marks tests as integration tests",
+]
