@@ -15,8 +15,9 @@ $$\frac{M_{i^{'}j^{'}}}{M_{i^{'}j}} > \frac{M_{ij^{'}}}{M_{ij}}$$
 In reality, this inequality doesn't hold for every pair of countries and products, but the percentage of pairs for which this inequality holds is calculated. If this percentage is high, then the matrix is considered to be sufficiently log-supermodular.
 """
 
-import numpy as np
 import warnings
+
+import numpy as np
 
 
 def get_frac_logsupermodular(matrix, eci, pci, samples_to_use=None):
@@ -68,7 +69,8 @@ def get_frac_logsupermodular(matrix, eci, pci, samples_to_use=None):
 
     if samples_to_use > 1e4:
         warnings.warn(
-            f"The number of samples used to compute log-supermodularity ({samples_to_use}), exceeds 10,000. May take a long time."
+            f"The number of samples used to compute log-supermodularity ({samples_to_use}), exceeds 10,000. May take a long time.",
+            stacklevel=2,
         )
 
     # Sample countries and products based on the sampling parameter
@@ -145,13 +147,15 @@ def get_frac_logsupermodular(matrix, eci, pci, samples_to_use=None):
     expected_valid = n * (n - 1) * k * (k - 1) / 4
     if total_valid != expected_valid:
         warnings.warn(
-            f"Expected {expected_valid} valid pairs, but found {total_valid}."
+            f"Expected {expected_valid} valid pairs, but found {total_valid}.",
+            stacklevel=2,
         )
     # If no valid pairs, then warn user
     if total_valid == 0:
         warnings.warn(
             "No valid pairs found for log-supermodularity check. "
-            "This may indicate that the matrix is too small or the ECI and PCI values are not well-defined."
+            "This may indicate that the matrix is too small or the ECI and PCI values are not well-defined.",
+            stacklevel=2,
         )
         return 0.0
     fraction_log_supermodular = condition_met.sum() / total_valid

@@ -1,4 +1,4 @@
-from ecomplexity.ecomplexity import ecomplexity
-from ecomplexity.proximity import proximity
+from ecomplexity.ecomplexity import ecomplexity as ecomplexity
+from ecomplexity.proximity import proximity as proximity
 
 name = "ecomplexity"

@@ -1,4 +1,3 @@
-import pandas as pd
 import numpy as np
 
 
@@ -18,14 +17,14 @@ def calc_discrete_proximity(mcp, ubiquity, asymmetric=False):
     # Calculate discrete proximity
     phi = mcp.T @ mcp
     phi = phi / ubiquity[np.newaxis, :]
-    
-    # Set diagonal to 0 explicitly 
+
+    # Set diagonal to 0 explicitly
     np.fill_diagonal(phi, 0)
 
-    if asymmetric == False:
+    if not asymmetric:
         # Symmetric proximity matrix
         phi = np.minimum(phi, phi.T)
-    elif asymmetric == True:
+    elif asymmetric:
         # Asymmetric proximity matrix
         phi = phi.T
 

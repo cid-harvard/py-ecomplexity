@@ -1,8 +1,11 @@
-import pandas as pd
 import numpy as np
-from ecomplexity.calc_proximity import calc_discrete_proximity
-from ecomplexity.calc_proximity import calc_continuous_proximity
-from ecomplexity.ComplexityData import ComplexityData
+import pandas as pd
+
+from ecomplexity.calc_proximity import (
+    calc_continuous_proximity,
+    calc_discrete_proximity,
+)
+from ecomplexity.complexity_data import ComplexityData
 
 
 def proximity(
@@ -18,29 +21,29 @@ def proximity(
 ):
     """Wrapper function to calculate product proximity matrices
 
-        Args:
-            data: pandas df with cols 'time','loc','prod','val'
-            cols_input: dict of column names for time, location, product and value.
-                Example: {'time':'year', 'loc':'origin', 'prod':'hs92', 'val':'export_val'}
-            presence_test: str for test used for presence of industry in location.
-                One of "rca" (default), "rpop", "both", or "manual".
-                Determines which values are used for M_cp calculations.
-                If "manual", M_cp is taken as given from the "value" column in data
-            val_errors_flag: {'coerce','ignore','raise'}. Passed to pd.to_numeric
-                *default* coerce.
-            rca_mcp_threshold: numeric indicating RCA threshold beyond which mcp is 1.
-                *default* 1.
-            rpop_mcp_threshold: numeric indicating RPOP threshold beyond which mcp is 1.
-                *default* 1. Only used if presence_test is not "rca".
-            pop: pandas df, with time, location and corresponding population, in that order.
-                Not required if presence_test is "rca" (default).
-            continuous: Whether to consider correlation of every product pair (True)
-                or product co-occurrence (False). *default* False.
-            asymmetric: Whether to generate asymmetric proximity matrix (True) or
-                symmetric (False). *default* False.
+    Args:
+        data: pandas df with cols 'time','loc','prod','val'
+        cols_input: dict of column names for time, location, product and value.
+            Example: {'time':'year', 'loc':'origin', 'prod':'hs92', 'val':'export_val'}
+        presence_test: str for test used for presence of industry in location.
+            One of "rca" (default), "rpop", "both", or "manual".
+            Determines which values are used for M_cp calculations.
+            If "manual", M_cp is taken as given from the "value" column in data
+        val_errors_flag: {'coerce','ignore','raise'}. Passed to pd.to_numeric
+            *default* coerce.
+        rca_mcp_threshold: numeric indicating RCA threshold beyond which mcp is 1.
+            *default* 1.
+        rpop_mcp_threshold: numeric indicating RPOP threshold beyond which mcp is 1.
+            *default* 1. Only used if presence_test is not "rca".
+        pop: pandas df, with time, location and corresponding population, in that order.
+            Not required if presence_test is "rca" (default).
+        continuous: Whether to consider correlation of every product pair (True)
+            or product co-occurrence (False). *default* False.
+        asymmetric: Whether to generate asymmetric proximity matrix (True) or
+            symmetric (False). *default* False.
 
-        Returns:
-            pandas df with proximity values for every product pair
+    Returns:
+        pandas df with proximity values for every product pair
     """
 
     cdata = ComplexityData(data, cols_input, val_errors_flag)
@@ -49,7 +52,6 @@ def proximity(
 
     # Iterate over time stamps
     for t in cdata.data.index.unique("time"):
-        print(t)
         # Rectangularize df
         cdata.create_full_df(t)
 
@@ -67,13 +69,13 @@ def proximity(
         cdata.ubiquity_t = np.nansum(cdata.mcp_t, axis=0)
 
         # Calculate proximity
-        if continuous == False:
+        if not continuous:
             prox_mat = calc_discrete_proximity(
                 cdata.mcp_t, cdata.ubiquity_t, asymmetric
             )
-        elif continuous == True and presence_test == "rpop":
+        elif continuous and presence_test == "rpop":
             prox_mat = calc_continuous_proximity(cdata.rpop_t, cdata.ubiquity_t)
-        elif continuous == True and presence_test != "rpop":
+        elif continuous and presence_test != "rpop":
             prox_mat = calc_continuous_proximity(cdata.rca_t, cdata.ubiquity_t)
 
         # Reshape as df
@@ -91,7 +93,7 @@ def proximity(
     output = output.reset_index()
     output.columns = ["prod1", "prod2", "proximity", "time"]
     output = output[["time", "prod1", "prod2", "proximity"]]
-    
+
     # # Remove entries for product's proximity with itself
     # output = output[output.prod1 != output.prod2]
 

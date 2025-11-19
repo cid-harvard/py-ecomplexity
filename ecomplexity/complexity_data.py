@@ -1,14 +1,11 @@
 # Complexity calculations
+import warnings
+
 import numpy as np
 import pandas as pd
-import warnings
-import sys
-from functools import wraps
-import time
-import datetime
 
 
-class ComplexityData(object):
+class ComplexityData:
     """Calculate complexity and other related results
 
     Args:
@@ -45,13 +42,15 @@ class ComplexityData(object):
         self.data.val = pd.to_numeric(self.data.val, errors=val_errors_flag_input)
         self.data = self.data.set_index(["time", "loc", "prod"])
         if self.data.val.isnull().values.any():
-            warnings.warn("NaN value(s) present, coercing to zero(es)")
+            warnings.warn("NaN value(s) present, coercing to zero(es)", stacklevel=2)
             self.data.val = self.data.val.fillna(0)
 
         # Remove duplicates
         dups = self.data.index.duplicated()
         if dups.sum() > 0:
-            warnings.warn("Duplicate values exist, keeping the first occurrence")
+            warnings.warn(
+                "Duplicate values exist, keeping the first occurrence", stacklevel=2
+            )
             self.data = self.data[~self.data.index.duplicated()]
 
     def create_full_df(self, t):
@@ -117,9 +116,9 @@ class ComplexityData(object):
         pop_index = self.data_t.index.unique("loc")
         pop_t = pop_t.reindex(pop_index)
         pop_t = pop_t.values
-        assert (
-            pop_t.shape[0] == data_np.shape[0]
-        ), f"Year {t}: Trade and population data have to be available for the same countries / locations"
+        assert pop_t.shape[0] == data_np.shape[0], (
+            f"Year {t}: Trade and population data have to be available for the same countries / locations"
+        )
 
         num = data_np / pop_t
         loc_total = np.nansum(data_np, axis=0)[np.newaxis, :]

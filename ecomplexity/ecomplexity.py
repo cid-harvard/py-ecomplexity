@@ -1,11 +1,15 @@
+import warnings
+
 import numpy as np
 import pandas as pd
-import warnings
-from ecomplexity.calc_proximity import calc_discrete_proximity
-from ecomplexity.calc_proximity import calc_continuous_proximity
-from ecomplexity.ComplexityData import ComplexityData
+
 from ecomplexity.calc_density import calc_density
+from ecomplexity.calc_proximity import (
+    calc_continuous_proximity,
+    calc_discrete_proximity,
+)
 from ecomplexity.coicog import calc_coi_cog
+from ecomplexity.complexity_data import ComplexityData
 from ecomplexity.log_supermodularity import get_frac_logsupermodular
 
 
@@ -60,7 +64,8 @@ def calc_eci_pci(cdata):
     # Check if diversity or ubiquity is 0 or nan, can cause problems
     if ((cdata.diversity_t == 0).sum() > 0) | ((cdata.ubiquity_t == 0).sum() > 0):
         warnings.warn(
-            f"In year {cdata.t}, diversity / ubiquity is 0 for some locs/prods"
+            f"In year {cdata.t}, diversity / ubiquity is 0 for some locs/prods",
+            stacklevel=2,
         )
 
     # Extract valid elements only
@@ -76,12 +81,12 @@ def calc_eci_pci(cdata):
     # Make copy of transpose to ensure contiguous array for performance reasons
     mcp2_t = mcp2.T.copy()
     # These matrix multiplication lines are very slow
-    Mcc = mcp1 @ mcp2_t
-    Mpp = mcp2_t @ mcp1
+    mcc = mcp1 @ mcp2_t
+    mpp = mcp2_t @ mcp1
 
     try:
         # Calculate eigenvectors
-        eigvals, eigvecs = np.linalg.eig(Mpp)
+        eigvals, eigvecs = np.linalg.eig(mpp)
         eigvecs = np.real(eigvecs)
         # Get eigenvector corresponding to second largest eigenvalue
         eig_index = eigvals.argsort()[-2]
@@ -100,8 +105,9 @@ def calc_eci_pci(cdata):
             pci_t = np.insert(pci_t, x, np.nan)
 
     except Exception as e:
-        warnings.warn(f"Unable to calculate eigenvectors for year {cdata.t}")
-        print(e)
+        warnings.warn(
+            f"Unable to calculate eigenvectors for year {cdata.t}", stacklevel=2
+        )
         eci_t = np.empty(cdata.mcp_t.shape[0])
         pci_t = np.empty(cdata.mcp_t.shape[1])
         eci_t[:] = np.nan
@@ -184,8 +190,6 @@ def ecomplexity(
 
     # Iterate over time stamps
     for t in cdata.data.index.unique("time"):
-        if verbose:
-            print(t)
         # Rectangularize df
         cdata.create_full_df(t)
 
@@ -205,7 +209,8 @@ def ecomplexity(
         # If ANY of diversity or ubiquity is 0, warn that eci and pci will be nan
         if np.any(cdata.diversity_t == 0) or np.any(cdata.ubiquity_t == 0):
             warnings.warn(
-                f"Year {t}: Diversity or ubiquity is 0, so ECI and PCI will be nan"
+                f"Year {t}: Diversity or ubiquity is 0, so ECI and PCI will be nan",
+                stacklevel=2,
             )
 
         # Calculate ECI and PCI
@@ -218,7 +223,8 @@ def ecomplexity(
             if np.all(np.isin(np.unique(cdata.mcp_t), [0, 1])):
                 if check_logsupermodularity:
                     warnings.warn(
-                        "Log-supermodularity check is not applicable for binary mcp matrix. Skipping..."
+                        "Log-supermodularity check is not applicable for binary mcp matrix. Skipping...",
+                        stacklevel=2,
                     )
                 check_logsupermodularity = False
 
@@ -249,14 +255,11 @@ def ecomplexity(
             frac_log_supermodular = get_frac_logsupermodular(
                 matrix, cdata.eci_t, cdata.pci_t, samples_to_use=samples_to_use
             )
-            if report_logsupermodularity:
-                print(
-                    f"Percentage of pairs compared that meet log-supermodularity condition: {frac_log_supermodular:.2%}"
-                )
 
             if frac_log_supermodular <= 0.3:
                 warnings.warn(
-                    f"Year {t}: Log-supermodularity condition is not fully satisfied ({frac_log_supermodular:.2%} of pairs compared satisfy this condition). The ECI and PCI values may not be a true representation of the complexity. More details at: https://growthlab.hks.harvard.edu/publications/structural-ranking-economic-complexity"
+                    f"Year {t}: Log-supermodularity condition is not fully satisfied ({frac_log_supermodular:.2%} of pairs compared satisfy this condition). The ECI and PCI values may not be a true representation of the complexity. More details at: https://growthlab.hks.harvard.edu/publications/structural-ranking-economic-complexity",
+                    stacklevel=2,
                 )
 
         # Check if proximities are pre-computed, otherwise compute from data
@@ -287,11 +290,13 @@ def ecomplexity(
                 )
                 if nan_frac > 0:
                     warnings.warn(
-                        f"Year {t}: Proximity matrix contains {nan_frac*100:.2}% non-diagonal values that are NaN's, so some density values will be NaN.\nAssuming diagonals are 1 and that other nan's are zero."
+                        f"Year {t}: Proximity matrix contains {nan_frac * 100:.2}% non-diagonal values that are NaN's, so some density values will be NaN.\nAssuming diagonals are 1 and that other nan's are zero.",
+                        stacklevel=2,
                     )
                 else:
                     warnings.warn(
-                        f"Year {t}: Proximity matrix contains diagonal values that are NaN's. Assuming all diagonal values to be one."
+                        f"Year {t}: Proximity matrix contains diagonal values that are NaN's. Assuming all diagonal values to be one.",
+                        stacklevel=2,
                     )
                 # Replace diagonals with one
                 np.fill_diagonal(prox_mat, 1)

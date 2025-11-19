@@ -1,7 +1,6 @@
 # Density as defined in:
 # Hidalgo, C. A., Klinger, B., Barabasi, A.-L., & Hausmann, R. (2007). The Product Space Conditions the Development of Nations. Science, 317(5837), 482–487. https://doi.org/10.1126/science.1144581
 
-import pandas as pd
 import numpy as np
 
 
@@ -30,7 +29,7 @@ def calc_density(rca_or_mcp, proximity_mat, knn=None):
             raise ImportError(
                 "scikit-learn is required for knn density calculations. "
                 "Install it with: pip install ecomplexity[knn]"
-            )
+            ) from None
         # Convert proximity matrix to a distance matrix
         distance_mat = 1 - proximity_mat
         # Get proximity to k nearest neighbors
