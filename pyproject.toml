@@ -21,16 +21,16 @@ classifiers = [
 ]
 keywords = ["pandas", "python", "networks", "economics", "complexity"]
 dependencies = ["pandas >1.0", "numpy >1.22.0"]
-requires-python = ">=3.8"
+requires-python = ">=3.9"
 
 [project.optional-dependencies]
 knn = ["scikit-learn >1.0.0"]
 dev = [
-    "pytest >=7.0.0",
+    "pytest>=7.4.0",
     "pytest-cov >=4.0.0",
-    "ruff >=0.1.0",
-    "mypy >=1.0.0",
-    "pre-commit >=3.0.0",
+    "ruff >=0.11.0",
+    "mypy>=1.15.0",
+    "pre-commit>=4.1.0",
 ]
 
 [project.urls]
@@ -55,7 +55,7 @@ exclude = [
 
 [tool.ruff]
 line-length = 88
-target-version = "py38"
+target-version = "py39"
 
 [tool.ruff.lint]
 select = [
@@ -91,7 +91,7 @@ force-single-line = false
 section-order = ["future", "standard-library", "third-party", "first-party", "local-folder"]
 
 [tool.mypy]
-python_version = "3.8"
+python_version = "3.9"
 ignore_missing_imports = true
 show_error_codes = true
 
