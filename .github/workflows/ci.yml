@@ -24,7 +24,7 @@ jobs:
           version: "latest"
 
       - name: Install dependencies
-        run: uv sync
+        run: uv sync --extra dev
 
       - name: Run ruff lint
         run: uv run ruff check .
@@ -49,7 +49,7 @@ jobs:
           version: "latest"
 
       - name: Install dependencies
-        run: uv sync
+        run: uv sync --extra dev
 
       - name: Run mypy
         run: uv run mypy ecomplexity/ --ignore-missing-imports
@@ -77,10 +77,7 @@ jobs:
           version: "latest"
 
       - name: Install dependencies
-        run: uv sync
-
-      - name: Install optional dependencies
-        run: uv sync --extra knn
+        run: uv sync --extra dev --extra knn
 
       - name: Run tests
         run: uv run pytest tests/ -v
@@ -102,10 +99,7 @@ jobs:
           version: "latest"
 
       - name: Install dependencies
-        run: uv sync
-
-      - name: Install pytest-cov
-        run: uv pip install pytest-cov
+        run: uv sync --extra dev
 
       - name: Run tests with coverage
         run: uv run pytest tests/ --cov=ecomplexity --cov-branch --cov-report=term
