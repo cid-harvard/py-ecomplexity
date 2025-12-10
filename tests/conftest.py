@@ -5,6 +5,41 @@ from pathlib import Path
 import pandas as pd
 import pytest
 
+# ============================================================================
+# Helper Functions
+# ============================================================================
+
+
+def load_fixture(filename: str) -> pd.DataFrame:
+    """Load a fixture file from the fixtures directory.
+
+    Args:
+        filename: Name of the fixture file (e.g., 'trade_data_sample.csv')
+
+    Returns:
+        pd.DataFrame: Loaded fixture data
+
+    Raises:
+        pytest.skip: If fixture file not found
+    """
+    fixtures_dir = Path(__file__).parent / "fixtures"
+    path = fixtures_dir / filename
+
+    if not path.exists():
+        pytest.skip(
+            f"Fixture file not found: {path}. "
+            "Run 'stata -b do generate_stata_fixtures.do' in the tests directory "
+            "to generate Stata fixtures, or run 'python tests/generate_fixtures.py' "
+            "for Python-generated fixtures."
+        )
+
+    return pd.read_csv(path)
+
+
+# ============================================================================
+# Fixtures
+# ============================================================================
+
 
 @pytest.fixture
 def population_data_fixture():
@@ -16,16 +51,7 @@ def population_data_fixture():
     Returns:
         pd.DataFrame: Population data with columns: year, origin, population
     """
-    fixtures_dir = Path(__file__).parent / "fixtures"
-    pop_path = fixtures_dir / "population_data_sample.csv"
-
-    if not pop_path.exists():
-        pytest.skip(
-            f"Fixture file not found: {pop_path}. "
-            "Run 'python tests/generate_fixtures.py' to generate fixtures."
-        )
-
-    return pd.read_csv(pop_path)
+    return load_fixture("population_data_sample.csv")
 
 
 @pytest.fixture

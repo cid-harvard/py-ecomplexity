@@ -4,8 +4,10 @@ Data/
 archive/
 demo/
 .DS_Store
+._*
 ecomplexity/adhoc_tests/
 .pypirc
+stata_package/
 
 # Following lines created by https://www.gitignore.io/api/python
 
