@@ -119,6 +119,7 @@ def calc_eci_pci(cdata):
 def ecomplexity(
     data,
     cols_input,
+    output_normalized_pci=True,
     presence_test="rca",
     val_errors_flag="coerce",
     rca_mcp_threshold=1,
@@ -143,6 +144,8 @@ def ecomplexity(
             One of "rca" (default), "rpop", or "manual".
             Determines which values are used for M_cp calculations.
             If "manual", M_cp is taken as given from the "value" column in data
+        output_normalized_pci: bool to indicate if pci or normalized pci val is returned.
+            Normalized pci value is the default
         val_errors_flag: {'coerce','ignore','raise'}. Passed to pd.to_numeric
             *default* coerce.
         rca_mcp_threshold: numeric indicating RCA threshold beyond which mcp is 1.
@@ -335,10 +338,12 @@ def ecomplexity(
         # Normalize variables as per STATA package
         # Normalization using ECI mean and std. dev. preserves the property that
         # ECI = (mean of PCI of products for which MCP=1)
-        cdata.pci_t = (cdata.pci_t - cdata.eci_t.mean()) / cdata.eci_t.std()
+        if output_normalized_pci:
+            cdata.pci_t = (cdata.pci_t - cdata.eci_t.mean()) / cdata.eci_t.std()
+            
         cdata.cog_t = cdata.cog_t / cdata.eci_t.std()
         cdata.eci_t = (cdata.eci_t - cdata.eci_t.mean()) / cdata.eci_t.std()
-
+        
         cdata.coi_t = (cdata.coi_t - cdata.coi_t.mean()) / cdata.coi_t.std()
 
         # Reshape ndarrays to df
