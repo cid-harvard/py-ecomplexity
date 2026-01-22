@@ -137,10 +137,19 @@ class ComplexityData(object):
         def convert_to_binary(x, threshold):
             x = np.nan_to_num(x)
             x = np.where(x >= threshold, 1, 0)
+            return x      
+
+        def convert_to_bounded_continuous(x, threshold):
+            # mata rcahat = rca:^(`alpha') :/ (`beta' :+ rca:^(`alpha') )
+            alpha = 1
+            beta = 1
+            x = np.nan_to_num(x)
+            x = x ** alpha / (x ** alpha + beta)
             return x
 
         if presence_test == "rca":
-            self.mcp_t = convert_to_binary(self.rca_t, rca_mcp_threshold_input)
+            # self.mcp_t = convert_to_binary(self.rca_t, rca_mcp_threshold_input)
+            self.mcp_t = convert_to_bounded_continuous(self.rca_t, rca_mcp_threshold_input)
 
         elif presence_test == "rpop":
             self.calculate_rpop(pop, t)

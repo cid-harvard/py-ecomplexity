@@ -86,12 +86,16 @@ def calc_eci_pci(cdata):
         # Get eigenvector corresponding to second largest eigenvalue
         eig_index = eigvals.argsort()[-2]
         kp = eigvecs[:, eig_index]
+        lambda2 = np.real(eigvals[eig_index])
         kc = mcp1 @ kp
 
         # Adjust sign of ECI and PCI so it makes sense, as per book
         s1 = np.sign(np.corrcoef(diversity_valid, kc)[0, 1])
-        eci_t = s1 * kc
+        # eci_t = s1 * kc
         pci_t = s1 * kp
+
+        # Dividing by λ₂ normalizes making ECI values more comparable across time periods and datasets
+        eci_t = np.sum(mcp_valid * pci_t, axis=1) / (diversity_valid * lambda2)
 
         # Add back the deleted elements
         for x in cntry_mask:
@@ -201,7 +205,9 @@ def ecomplexity(
         else:
             cdata.calculate_manual_mcp()
 
-        # Calculate diversity and ubiquity
+        # generate a continuous mcp matrix values between 0 and 1 
+
+        # Calculate diversity and ubiquity using continous 
         cdata.diversity_t = np.nansum(cdata.mcp_t, axis=1)
         cdata.ubiquity_t = np.nansum(cdata.mcp_t, axis=0)
 
