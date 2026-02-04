@@ -108,7 +108,7 @@ def calc_eci_pci(cdata):
         eci_t[:] = np.nan
         pci_t[:] = np.nan
 
-    return (eci_t, pci_t)
+    return (eci_t, pci_t, lambda2)
 
 
 def ecomplexity(
@@ -216,7 +216,7 @@ def ecomplexity(
             )
 
         # Calculate ECI and PCI
-        cdata.eci_t, cdata.pci_t = calc_eci_pci(cdata)
+        cdata.eci_t, cdata.pci_t, lambda2 = calc_eci_pci(cdata)
 
         # Check logsupermodularity
         # If custom mcp matrix is given, then only run log-supermodularity check if mcp is continuous
@@ -351,4 +351,4 @@ def ecomplexity(
     cdata.output = pd.concat(cdata.output_list)
     cdata = conform_to_original_data(cdata, data)
 
-    return cdata.output
+    return cdata.output, lambda2
