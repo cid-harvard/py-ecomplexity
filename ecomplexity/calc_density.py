@@ -45,7 +45,7 @@ def calc_density(rca_or_mcp, proximity_mat, knn=None):
             # Multiply each row of rca_knn_p by proximity_knn_row
             num_p = rca_knn_p * proximity_knn_row
             # Sum across columns
-            density_p = np.nansum(rca_knn_p, axis=1)
+            density_p = np.nansum(num_p, axis=1)
             density.append(density_p)
         density = np.array(density).T
     return density

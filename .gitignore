@@ -1,7 +1,9 @@
 Data/
 archive/
+demo/
 .DS_Store
-ecomplexity/tests/
+ecomplexity/adhoc_tests/
+.pypirc
 
 # Following lines created by https://www.gitignore.io/api/python
 

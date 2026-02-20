@@ -14,9 +14,9 @@ Explore complexity and associated data using Harvard CID's Atlas tool: <http://a
 ## Tutorial
 
 **Installation**:
-At terminal: `pip install ecomplexity`
+For the latest stable version: `pip install ecomplexity`
 
-If you wish to install the latest version of the package under development, you can install directly from GitHub:
+Latest version of the package under development (untested and possibly with bugs), install directly from GitHub:
 `pip install git+https://github.com/cid-harvard/py-ecomplexity@develop`
 
 **Usage**:
@@ -46,7 +46,7 @@ data: pandas dataframe containing production / trade data.
 cols_input: dict of column names for time, location, product and value.
     Example: {'time':'year', 'loc':'origin', 'prod':'hs92', 'val':'export_val'}
 presence_test: str for test used for presence of industry in location.
-    One of "rca" (default), "rpop", "both", or "manual".
+    One of "rca" (default), "rpop", or "manual".
     Determines which values are used for M_cp calculations.
     If "manual", M_cp is taken as given from the "value" column in data
 val_errors_flag: {'coerce','ignore','raise'}. Passed to pd.to_numeric
@@ -56,23 +56,35 @@ rca_mcp_threshold: numeric indicating RCA threshold beyond which mcp is 1.
 rpop_mcp_threshold: numeric indicating RPOP threshold beyond which mcp is 1.
     *default* 1. Only used if presence_test is not "rca".
 pop: pandas df, with time, location and corresponding population, in that order.
-    Not required if presence_test is "rca" (default).
+    Not required if presence_test is "rca", which is the default.
 continuous: Used to calculate product proximities, indicates whether
     to consider correlation of every product pair (True) or product
     co-occurrence (False). *default* False.
 asymmetric: Used to calculate product proximities, indicates whether
     to generate asymmetric proximity matrix (True) or symmetric (False).
     *default* False.
+proximity_edgelist: pandas df with cols 'prod1', 'prod2', 'proximity'.
+    If None (default), proximity values are calculated from data.
 knn: Number of nearest neighbors from proximity matrix to use to calculate
     density. Will use entire proximity matrix if None.
     *default* None.
+check_logsupermodularity: If True (default), check log-supermodularity. If False, don't.
+    If int, use roughly that many samples to check log-supermodularity.
+    If "all", use all samples to check log-supermodularity.
+report_logsupermodularity: If True, print percent of samples that conform to log-supermodularity.
+    If False (default), don't report.
+    Only used if check_logsupermodularity is True.
+verbose: Print year being processed
 ```
 
 ## FAQ
 
 - Why are ECI and PCI are both normalized using ECI's mean and std. dev?
     + This normalization preserves the property that ECI = (mean of PCI of products for which MCP=1)
-
+- What is log-supermodularity?
+    + Refer `ecomplexity/log_supermodularity.py` for a brief explanation. More at Schetter, U. (2019). A Structural Ranking of Economic Complexity (SSRN Scholarly Paper 3485842). https://doi.org/10.2139/ssrn.3485842.
+- I get different numbers each time I run the log-supermodularity check. How do I set a seed to ensure reproducibility?
+    + Set the seed using `np.random.seed(seed)` before calling `ecomplexity`.
 
 ### References
 

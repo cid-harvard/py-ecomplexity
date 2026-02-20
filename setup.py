@@ -2,11 +2,11 @@ from setuptools import setup, find_packages
 
 
 def readme():
-    with open("README.md") as f:
+    with open("README.md", encoding="utf-8") as f:
         return f.read()
 
 setup(name='ecomplexity',
-      version='0.5.2',
+      version='0.5.3',
       description='Package to calculate economic complexity and associated variables',
       long_description=readme(),
       long_description_content_type='text/markdown',
@@ -19,7 +19,7 @@ setup(name='ecomplexity',
       python_requires='>=3',
       install_requires=[
           'pandas >0.23.0',
-          'numpy >1.22.0'
+          'numpy >1.22.0',
           'scikit-learn >1.0.0'
       ],
       zip_safe=False,

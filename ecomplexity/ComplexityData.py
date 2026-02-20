@@ -43,10 +43,10 @@ class ComplexityData(object):
         """Clean data to remove non-numeric values, handle NA's and duplicates"""
         # Make sure values are numeric
         self.data.val = pd.to_numeric(self.data.val, errors=val_errors_flag_input)
-        self.data.set_index(["time", "loc", "prod"], inplace=True)
+        self.data = self.data.set_index(["time", "loc", "prod"])
         if self.data.val.isnull().values.any():
             warnings.warn("NaN value(s) present, coercing to zero(es)")
-            self.data.val.fillna(0, inplace=True)
+            self.data.val = self.data.val.fillna(0)
 
         # Remove duplicates
         dups = self.data.index.duplicated()
@@ -79,7 +79,7 @@ class ComplexityData(object):
         self.data_t = self.data_t.merge(
             val_ubiquity_check[["prod"]], on="prod", how="right"
         )
-        self.data_t.set_index(["loc", "prod"], inplace=True)
+        self.data_t = self.data_t.set_index(["loc", "prod"])
         # Create full dataframe with all combinations of locations and products
         data_index = pd.MultiIndex.from_product(
             self.data_t.index.levels, names=self.data_t.index.names
@@ -137,35 +137,42 @@ class ComplexityData(object):
         def convert_to_binary(x, threshold):
             x = np.nan_to_num(x)
             x = np.where(x >= threshold, 1, 0)
+            return x      
+
+        def convert_to_bounded_continuous(x, threshold):
+            # mata rcahat = rca:^(`alpha') :/ (`beta' :+ rca:^(`alpha') )
+            alpha = 1
+            beta = 1
+            x = np.nan_to_num(x)
+            x = x ** alpha / (x ** alpha + beta)
             return x
 
         if presence_test == "rca":
             self.mcp_t = convert_to_binary(self.rca_t, rca_mcp_threshold_input)
+            self.mcp_t_continuous = convert_to_bounded_continuous(self.rca_t, rca_mcp_threshold_input)
 
         elif presence_test == "rpop":
             self.calculate_rpop(pop, t)
             self.mcp_t = convert_to_binary(self.rpop_t, rpop_mcp_threshold_input)
+            # self.mcp_t_continuous = convert_to_bounded_continuous(self.rpop_t, rpop_mcp_threshold_input)
+            self.mcp_t_continuous = np.nan
 
         elif presence_test == "both":
             self.calculate_rpop(pop, t)
             self.mcp_t = convert_to_binary(
                 self.rca_t, rca_mcp_threshold_input
             ) + convert_to_binary(self.rpop_t, rpop_mcp_threshold_input)
+            # self.mcp_t_continuous = convert_to_bounded_continuous(
+            #     self.rca_t, rca_mcp_threshold_input
+            # ) + convert_to_bounded_continuous(self.rpop_t, rpop_mcp_threshold_input)
+            self.mcp_t_continuous = np.nan
 
     def calculate_manual_mcp(self):
-        """If pre-computed MCP supplied, check validity and reshape"""
-        # Test to see if indeed MCP
-        if np.any(~np.isin(self.data_t.values, [0, 1])):
-            error_val = self.data_t.values[~np.isin(self.data_t.values, [0, 1])].flat[0]
-            raise ValueError(
-                "Manually supplied MCP column contains values other than 0 or 1 - Val: {}".format(
-                    error_val
-                )
-            )
-
+        """If pre-computed MCP supplied, reshape"""
         # Convert data into numpy array
         loc_n_vals = len(self.data_t.index.levels[0])
         prod_n_vals = len(self.data_t.index.levels[1])
         data_np = self.data_t.values.reshape((loc_n_vals, prod_n_vals))
 
+        self.rca_t = data_np
         self.mcp_t = data_np
