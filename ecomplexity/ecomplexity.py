@@ -181,6 +181,7 @@ def ecomplexity(
             - density: Density of the network around each product
             - coi: Complexity Outlook Index
             - cog: Complexity Outlook Gain
+            - lambda: How much variance is explained by the complexity dimension
 
     """
     cdata = ComplexityData(data, cols_input, val_errors_flag)
@@ -351,6 +352,5 @@ def ecomplexity(
 
     cdata.output = pd.concat(cdata.output_list)
     cdata = conform_to_original_data(cdata, data)
-    import pdb; pdb.set_trace()
 
     return cdata.output
