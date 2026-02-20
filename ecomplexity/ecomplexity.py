@@ -9,7 +9,7 @@ from ecomplexity.coicog import calc_coi_cog
 from ecomplexity.log_supermodularity import get_frac_logsupermodular
 
 
-def reshape_output_to_data(cdata, t):
+def reshape_output_to_data(cdata, t, lambda2):
     """Reshape output ndarrays to df"""
     diversity = (
         cdata.diversity_t[:, np.newaxis].repeat(cdata.mcp_t.shape[1], axis=1).ravel()
@@ -42,6 +42,7 @@ def reshape_output_to_data(cdata, t):
     output = pd.DataFrame.from_dict(out_dict).reset_index(drop=True)
 
     cdata.data_t["time"] = t
+    cdata.data_t['lambda2'] = lambda2
     cdata.output_t = pd.concat([cdata.data_t.reset_index(), output], axis=1)
     cdata.output_list.append(cdata.output_t)
     return cdata
@@ -346,9 +347,10 @@ def ecomplexity(
         cdata.coi_t = (cdata.coi_t - cdata.coi_t.mean()) / cdata.coi_t.std()
 
         # Reshape ndarrays to df
-        cdata = reshape_output_to_data(cdata, t)
+        cdata = reshape_output_to_data(cdata, t, lambda2)
 
     cdata.output = pd.concat(cdata.output_list)
     cdata = conform_to_original_data(cdata, data)
+    import pdb; pdb.set_trace()
 
-    return cdata.output, lambda2
+    return cdata.output
