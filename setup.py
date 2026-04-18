@@ -1,9 +1,8 @@
+from pathlib import Path
 from setuptools import setup, find_packages
 
-
 def readme():
-    with open("README.md") as f:
-        return f.read()
+    return Path("README.md").read_text(encoding="utf-8")
 
 setup(name='ecomplexity',
       version='0.5.2',
